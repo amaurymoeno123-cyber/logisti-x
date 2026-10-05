@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LOGISTI-X · Despachos y entregas</title>
+    <meta name="description" content="Panel operativo de despachos y entregas del microproyecto LOGISTI-X (plataforma INTEGRAX).">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%231c1917'/><text x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' fill='white' text-anchor='middle'>LX</text></svg>">
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+<!-- ===================================================== acceso ======= -->
+<section class="acceso" id="pantallaAcceso">
+    <div class="acceso-tarjeta">
+        <div class="marca">
+            <span class="marca-glifo">LX</span>
+            <span>LOGISTI-X</span>
+        </div>
+
+        <h1>Despachos y entregas</h1>
+        <p class="ayuda">Microproyecto 2.5 de la plataforma INTEGRAX.</p>
+
+        <form id="formAcceso" autocomplete="on">
+            <label class="campo">
+                <span>Usuario</span>
+                <input type="text" id="usuario" name="username" value="coordinador"
+                       autocomplete="username" required>
+            </label>
+
+            <label class="campo">
+                <span>Contraseña</span>
+                <input type="password" id="clave" name="password"
+                       autocomplete="current-password" required>
+            </label>
+
+            <button class="boton principal" type="submit" style="width:100%; margin-top:8px;">
+                Entrar
+            </button>
+        </form>
+    </div>
+</section>
+
+<!-- ================================================== aplicacion ====== -->
+<div class="aplicacion" id="aplicacion">
+
+    <header class="barra">
+        <div class="marca">
+            <span class="marca-glifo">LX</span>
+            <span class="oculto-movil">LOGISTI-X</span>
+        </div>
+
+        <span class="en-vivo" id="indicadorVivo" title="Canal de estados en tiempo real">
+            <span class="pulso"></span>
+            <span id="textoVivo">conectando…</span>
+        </span>
+
+        <span class="separador"></span>
+
+        <span class="secundario oculto-movil" id="sesionInfo"></span>
+        <button class="boton pequeno plano" id="btnSalir">Salir</button>
+    </header>
+
+    <main class="envoltura">
+
+        <div class="encabezado-seccion">
+            <div>
+                <h2>Operación de hoy</h2>
+                <p id="resumenIntegracion" class="secundario">Cargando…</p>
+            </div>
+            <button class="boton principal" id="btnNuevo">Registrar despacho</button>
+        </div>
+
+        <div class="metricas" id="metricas"></div>
+
+        <div class="filtros">
+            <input type="text" class="buscador" id="filtroTexto"
+                   placeholder="Buscar por guía, despacho, cliente o dirección">
+
+            <select id="filtroEstado">
+                <option value="">Todos los estados</option>
+                <option value="REGISTRADO">Registrado</option>
+                <option value="EN_PREPARACION">En preparación</option>
+                <option value="ASIGNADO">Asignado</option>
+                <option value="EN_RUTA">En ruta</option>
+                <option value="ENTREGADO">Entregado</option>
+                <option value="FALLIDO">Fallido</option>
+                <option value="DEVUELTO">Devuelto</option>
+                <option value="CANCELADO">Cancelado</option>
+            </select>
+
+            <select id="filtroTransportador">
+                <option value="">Todos los transportadores</option>
+            </select>
+
+            <button class="boton" id="btnLimpiar">Limpiar</button>
+        </div>
+
+        <div class="tarjeta">
+            <div class="tabla-scroll">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Despacho</th>
+                        <th>Guía</th>
+                        <th>Cliente</th>
+                        <th>Destino</th>
+                        <th>Estado</th>
+                        <th>Transportador</th>
+                        <th class="num">Peso</th>
+                        <th class="num">Flete</th>
+                        <th>Entrega</th>
+                    </tr>
+                    </thead>
+                    <tbody id="cuerpoTabla"></tbody>
+                </table>
+            </div>
+            <div id="estadoTabla"></div>
+        </div>
+    </main>
+</div>
+
+<!-- ============================================ panel de detalle ====== -->
+<div class="velo" id="velo"></div>
+
+<aside class="panel" id="panelDetalle" aria-hidden="true">
+    <div class="panel-cabeza">
+        <div style="flex:1">
+            <h2 id="detalleTitulo">Despacho</h2>
+            <div class="secundario mono" id="detalleGuia"></div>
+        </div>
+        <button class="boton pequeno plano" id="btnCerrarPanel" aria-label="Cerrar">Cerrar</button>
+    </div>
+
+    <div class="panel-cuerpo" id="detalleCuerpo"></div>
+
+    <div class="panel-pie" id="detalleAcciones"></div>
+</aside>
+
+<!-- ============================================= modal generico ======= -->
+<div class="modal" id="modal">
+    <div class="modal-caja">
+        <h2 id="modalTitulo"></h2>
+        <p class="ayuda" id="modalAyuda"></p>
+        <form id="modalForm"></form>
+        <div class="modal-acciones">
+            <button class="boton" type="button" id="modalCancelar">Cancelar</button>
+            <button class="boton principal" type="button" id="modalAceptar">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div class="avisos" id="avisos"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

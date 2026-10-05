@@ -1,0 +1,42 @@
+# ============================================================================
+# Perfil dev - SOLO para la maquina local y la demostracion en clase.
+#
+# Estos valores son deliberadamente publicos y no protegen nada: apuntan a un
+# PostgreSQL en Docker que vive en el portatil. En cualquier otro entorno se
+# usa el perfil por omision con variables de entorno reales.
+# ============================================================================
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5434/logistix
+    username: logistix
+    password: logistix_dev_2026
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+logistix:
+  seguridad:
+    # Secreto de desarrollo. NO sirve para produccion y esta a la vista a
+    # proposito para que nadie lo confunda con uno real.
+    jwt-secreto: "clave-solo-para-desarrollo-local-logistix-integrax-2026"
+    jwt-vigencia: PT12H
+    sembrar-demo: true
+    password-demo: "logistix2026"
+
+integrax:
+  # Con los seis equipos trabajando en paralelo, lo normal en desarrollo es
+  # que SALES-X y CRM-X todavia no esten arriba: se usan los dobles.
+  ventas:
+    simulado: true
+  crm:
+    simulado: true
+  eventos:
+    habilitado: false     # se enciende cuando SALES-X y SERVI-X tengan endpoint
+    suscriptores: []
+
+logging:
+  level:
+    co.unisabaneta.integrax.logistix: DEBUG
+    org.hibernate.SQL: DEBUG

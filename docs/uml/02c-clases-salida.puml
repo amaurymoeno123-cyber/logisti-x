@@ -1,0 +1,167 @@
+@startuml 02c-clases-salida
+' ============================================================================
+' LOGISTI-X · Diagrama de clases — Contratos de integración (UML 2.5)
+' Muestra de dónde sale cada contrato de datos (DTO / JSON) que LOGISTI-X
+' recibe o expone. 1 a 1 con src/main/java/.../integracion y .../api/dto.
+' ============================================================================
+skinparam dpi 170
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1F2937
+  ArrowColor #1F2937
+  HeaderBackgroundColor #F3F4F6
+}
+skinparam class<<raíz del agregado>> {
+  BorderColor #1D4ED8
+  HeaderBackgroundColor #DBEAFE
+  BorderThickness 2
+}
+skinparam class<<DTO entrada>> {
+  HeaderBackgroundColor #DCFCE7
+  BorderColor #166534
+}
+skinparam class<<DTO salida>> {
+  HeaderBackgroundColor #FCE7F3
+  BorderColor #9D174D
+}
+skinparam class<<evento>> {
+  HeaderBackgroundColor #FFEDD5
+  BorderColor #9A3412
+}
+skinparam interface {
+  BackgroundColor #FFFFFF
+  BorderColor #4C1D95
+  HeaderBackgroundColor #EDE9FE
+}
+skinparam package {
+  BorderColor #6B7280
+  BackgroundColor #FCFCFD
+  FontStyle bold
+}
+skinparam ArrowFontSize 10
+hide empty members
+
+title LOGISTI-X · Diagrama de clases — Contratos de SALIDA (lo que expone y publica)
+
+class Despacho <<raíz del agregado>> {
+  - despachoId : UUID
+  - numero : String
+  - numeroGuia : String
+  - pedidoId : UUID
+  - estado : EstadoDespacho
+  - ...
+  (atributos completos en la vista de dominio)
+}
+
+package "integracion.eventos  —  publica a SALES-X y FINAN-X" {
+  class OutboxEvento <<entidad>> {
+    + {static} DESPACHO_EN_RUTA : String = "despacho.en-ruta"
+    + {static} DESPACHO_ENTREGADO : String = "despacho.entregado"
+    - id : UUID
+    - tipo : String
+    - agregadoId : UUID
+    - payload : String  <<JSON>>
+    - estado : EstadoEvento = PENDIENTE
+    - intentos : Integer = 0
+    - ultimoError : String
+    - creadoEn : OffsetDateTime
+    - publicadoEn : OffsetDateTime
+    __
+    + marcarPublicado() : void
+    + registrarFallo(error : String, maxIntentos : int) : void
+  }
+  enum EstadoEvento {
+    PENDIENTE
+    PUBLICADO
+    FALLIDO
+  }
+  class SobreEvento <<evento>> {
+    + eventoId : UUID
+    + tipo : String
+    + version : int
+    + origen : String = "LOGISTI-X"
+    + ocurridoEn : OffsetDateTime
+    + datos : DatosDespacho
+  }
+  class DatosDespacho <<evento>> {
+    + despachoId : UUID
+    + numero : String
+    + numeroGuia : String
+    + pedidoId : UUID
+    + estado : String
+    + receptorNombre : String
+    + entregadoEn : OffsetDateTime
+    + costoFlete : BigDecimal
+    + items : List<DatosItem>
+  }
+  class RegistradorEventos <<servicio>> {
+    + despachoEnRuta(d : Despacho) : void
+    + despachoEntregado(d : Despacho) : void
+    + despachoDevuelto(d : Despacho, motivo : String) : void
+    - aJson(sobre : SobreEvento) : String
+  }
+  class PublicadorEventos <<servicio programado>> {
+    + publicarPendientes() : void
+    - entregar(evento : OutboxEvento, suscriptores : List, maxIntentos : int) : void
+  }
+}
+
+package "despacho.api.dto  —  respuestas REST (panel, app, SERVI-X)" {
+  class DespachoResumen <<DTO salida>> {
+    + despachoId : UUID
+    + numero : String
+    + numeroGuia : String
+    + clienteNombre : String
+    + estado : EstadoDespacho
+    + pesoTotalKg : BigDecimal
+    + costoFlete : BigDecimal
+    __
+    + {static} de(d : Despacho) : DespachoResumen
+  }
+  class EventoTrazabilidad <<DTO salida>> {
+    + ocurridoEn : OffsetDateTime
+    + clase : String
+    + titulo : String
+    + detalle : String
+    + ubicacion : String
+    + origen : String
+    __
+    + {static} de(h : HistorialEstadoDespacho) : EventoTrazabilidad
+    + {static} de(n : Novedad) : EventoTrazabilidad
+  }
+  class GuiaGenerada <<DTO salida>> {
+    + despachoId : UUID
+    + numeroGuia : String
+    + transportador : String
+    + fechaEstimadaEntrega : LocalDate
+    + rotulo : String
+  }
+}
+class GuiaServicio <<servicio>> {
+  + generar() : String
+  + {static} digitoVerificacion(ano : int, consecutivo : long) : int
+  + {static} esValida(guia : String) : boolean
+}
+
+
+SobreEvento "1" *-- "1" DatosDespacho : datos >
+OutboxEvento ..> EstadoEvento
+DespachoResumen ..> Despacho : <<se deriva de>>
+EventoTrazabilidad ..> Despacho : <<se deriva de>>\nhistorial + novedades
+GuiaGenerada ..> GuiaServicio : <<usa>>
+RegistradorEventos ..> Despacho : <<lee>>
+RegistradorEventos ..> SobreEvento : <<serializa a JSON>>
+RegistradorEventos ..> OutboxEvento : <<guarda>>
+PublicadorEventos ..> OutboxEvento : <<lee pendientes>>
+legend right
+  <b>Colores del encabezado</b>
+  rosa: DTO de salida (respuesta REST)
+  naranja: evento asíncrono publicado por bandeja (outbox)
+  Los métodos {static} de(...) derivan el DTO de la entidad:
+  el contrato sale del modelo, no se escribe a mano.
+endlegend
+@enduml

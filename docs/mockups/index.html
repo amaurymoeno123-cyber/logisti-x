@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOGISTI-X · Prototipo navegable</title>
+<style>
+:root{
+  --bg:#EEF0F4; --panel:#FFFFFF; --ink:#111827; --ink2:#4B5563; --ink3:#6B7280;
+  --line:#E5E7EB; --line2:#D1D5DB; --brand:#1D4ED8; --brand-2:#DBEAFE;
+  --ok:#15803D; --ok-bg:#DCFCE7; --warn:#B45309; --warn-bg:#FEF3C7; --bad:#B91C1C; --bad-bg:#FEE2E2;
+  /* colores de integración: los mismos del diagrama de clases */
+  --sales:#2563EB; --sales-bg:#DBEAFE;
+  --crm:#7C3AED; --crm-bg:#EDE9FE;
+  --calc:#475569; --calc-bg:#F1F5F9;
+  --evt:#C2410C; --evt-bg:#FFEDD5;
+  --out:#BE185D; --out-bg:#FCE7F3;
+  --r:8px; --r2:12px;
+  --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+button,select,input,textarea{font:inherit;color:inherit}
+
+/* ------------------------------------------------ marco del prototipo */
+.proto{display:grid;grid-template-columns:272px 1fr;height:100vh}
+.side{background:#0F172A;color:#CBD5E1;overflow:auto;padding:20px 12px 24px}
+.side h1{font-size:15px;color:#fff;margin:0 8px 2px;letter-spacing:.01em}
+.side .sub{font-size:12px;color:#94A3B8;margin:0 8px 18px}
+.side .grp{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#64748B;margin:18px 8px 6px}
+.side a{display:flex;gap:8px;align-items:baseline;padding:7px 8px;border-radius:6px;color:#CBD5E1;text-decoration:none;font-size:13px}
+.side a .cu{font-family:var(--mono);font-size:11px;color:#64748B;min-width:52px}
+.side a:hover{background:#1E293B}
+.side a.on{background:#1D4ED8;color:#fff}
+.side a.on .cu{color:#BFDBFE}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:10px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.toolbar .ttl{font-weight:600;margin-right:auto}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--ink2)}
+.seg button+button{border-left:1px solid var(--line2)}
+.seg button.on{background:var(--ink);color:#fff}
+.chk{display:inline-flex;gap:8px;align-items:center;font-size:13px;cursor:pointer;user-select:none}
+.chk input{width:16px;height:16px;accent-color:var(--brand)}
+.stage{flex:1;overflow:auto;padding:24px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+.notes{position:sticky;top:0;display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r2);padding:16px}
+.card h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink3)}
+.card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:13px}
+.card dt{color:var(--ink3)} .card dd{margin:0}
+.card code{font-family:var(--mono);font-size:12px;background:#F3F4F6;padding:1px 5px;border-radius:4px}
+.legend{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.legend span{display:flex;gap:8px;align-items:center}
+.pinlist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-size:13px}
+.pinlist li{display:grid;grid-template-columns:22px 1fr;gap:8px}
+
+/* ------------------------------------------------ la app (pantallas) */
+.app{background:var(--panel);border:1px solid var(--line2);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px rgba(15,23,42,.06)}
+.appbar{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);background:#fff}
+.logo{font-weight:700;letter-spacing:-.01em}.logo b{color:var(--brand)}
+.appbar nav{display:flex;gap:4px;margin-left:12px}
+.appbar nav span{padding:6px 10px;border-radius:6px;color:var(--ink2);font-size:13px}
+.appbar nav span.on{background:var(--brand-2);color:var(--brand);font-weight:600}
+.appbar .user{margin-left:auto;font-size:12.5px;color:var(--ink3)}
+.appbody{padding:24px}
+.crumbs{font-size:12.5px;color:var(--ink3);margin-bottom:6px}
+.h{display:flex;align-items:center;gap:12px;margin:0 0 20px;flex-wrap:wrap}
+.h h2{margin:0;font-size:22px;letter-spacing:-.01em}
+.h .act{margin-left:auto;display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);background:#fff;border-radius:8px;padding:8px 14px;font-weight:600;font-size:13px;cursor:pointer}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.danger{color:var(--bad);border-color:#FCA5A5}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.box{border:1px solid var(--line);border-radius:var(--r2);padding:16px}
+.box h4{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3)}
+.f{display:flex;flex-direction:column;gap:6px;position:relative}
+.f label{font-size:12.5px;font-weight:600;color:var(--ink2);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.f .in{border:1px solid var(--line2);border-radius:8px;padding:9px 11px;background:#fff;min-height:38px;display:flex;align-items:center}
+.f .in.ro{background:#F9FAFB;color:var(--ink2)}
+.f .in.big{min-height:76px;align-items:flex-start}
+.f .help{font-size:12px;color:var(--ink3)}
+.f .err{font-size:12px;color:var(--bad)}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line);background:#F9FAFB}
+table.t td.mono,table.t td:first-child{white-space:nowrap}
+table.t td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.t tr:last-child td{border-bottom:0}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st-REGISTRADO{background:#F3F4F6;color:#374151}.st-EN_PREPARACION{background:#E0E7FF;color:#3730A3}
+.st-ASIGNADO{background:#DBEAFE;color:#1D4ED8}.st-EN_RUTA{background:#CFFAFE;color:#0E7490}
+.st-ENTREGADO{background:var(--ok-bg);color:var(--ok)}.st-FALLIDO{background:var(--warn-bg);color:var(--warn)}
+.st-DEVUELTO{background:#FAE8FF;color:#86198F}.st-CANCELADO{background:var(--bad-bg);color:var(--bad)}
+.kpi{border:1px solid var(--line);border-radius:var(--r2);padding:14px 16px}
+.kpi .v{font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--ink3)}
+.bar{height:8px;border-radius:99px;background:#F3F4F6;overflow:hidden}.bar i{display:block;height:100%;background:var(--brand)}
+.banner{display:block;border-radius:10px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+.banner.info{background:var(--brand-2);color:#1E3A8A}.banner.ok{background:var(--ok-bg);color:#14532D}
+.banner.warn{background:var(--warn-bg);color:#78350F}.banner.bad{background:var(--bad-bg);color:#7F1D1D}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.filters .in{border:1px solid var(--line2);border-radius:8px;padding:7px 11px;font-size:13px;color:var(--ink2);background:#fff}
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{position:relative;padding:0 0 18px 36px}
+.tl li::before{content:"";position:absolute;left:5px;top:4px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--brand)}
+.tl li.nov::before{border-color:var(--warn)} .tl li.fin::before{border-color:var(--ok)}
+.tl .when{font-size:12px;color:var(--ink3)}
+.tl .what{font-weight:600}
+.label-guia{border:2px dashed var(--ink);border-radius:10px;padding:18px;font-family:var(--mono);max-width:460px}
+.barcode{height:56px;background:repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 4px,#111 4px 5px,#fff 5px 8px,#111 8px 11px,#fff 11px 12px);margin:10px 0}
+.modal-back{background:rgba(17,24,39,.45);border-radius:14px;padding:40px 24px;display:flex;justify-content:center}
+.modal{background:#fff;border-radius:14px;max-width:520px;width:100%;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal h3{margin:0 0 6px;font-size:18px}
+.stepper{display:flex;gap:8px;margin-bottom:18px}
+.stepper span{flex:1;font-size:12px;padding:8px 10px;border-radius:8px;background:#F3F4F6;color:var(--ink3);font-weight:600}
+.stepper span.on{background:var(--brand-2);color:var(--brand)}
+.stepper span.ok{background:var(--ok-bg);color:var(--ok)}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;padding:6px 0}
+.check i{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700}
+.check i.y{background:var(--ok-bg);color:var(--ok)} .check i.n{background:var(--bad-bg);color:var(--bad)} .check i.w{background:var(--warn-bg);color:var(--warn)}
+.muted{color:var(--ink3)} .mono{font-family:var(--mono);font-size:12.5px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.spacer{height:16px}
+
+/* ------------------------------------------------ marco móvil (app del transportador) */
+.phone-wrap{display:flex;justify-content:center;padding:8px 0}
+.phone{width:390px;border:10px solid #111827;border-radius:40px;overflow:hidden;background:#fff;box-shadow:0 20px 40px rgba(15,23,42,.18)}
+.phone .pbar{display:flex;justify-content:space-between;padding:10px 20px 6px;font-size:12px;font-weight:600;background:#fff}
+.phone .phead{padding:10px 18px 14px;border-bottom:1px solid var(--line)}
+.phone .phead .t{font-size:18px;font-weight:700}
+.phone .pbody{padding:16px 18px 22px;display:flex;flex-direction:column;gap:14px;min-height:560px}
+.phone .btn{justify-content:center;padding:12px 14px;font-size:14px}
+.tile{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips span{border:1px solid var(--line2);border-radius:999px;padding:6px 11px;font-size:12.5px}
+.chips span.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* ------------------------------------------------ estados: carga, vacío, error */
+.skel{background:linear-gradient(90deg,#F3F4F6 0%,#E5E7EB 50%,#F3F4F6 100%);background-size:200% 100%;animation:sh 1.2s linear infinite;border-radius:8px}
+@keyframes sh{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+.empty,.errbox{text-align:center;padding:56px 24px;border:1px dashed var(--line2);border-radius:var(--r2)}
+.empty .ic,.errbox .ic{width:48px;height:48px;border-radius:12px;margin:0 auto 14px;display:grid;place-items:center;font-size:22px}
+.empty .ic{background:#F3F4F6}.errbox .ic{background:var(--bad-bg);color:var(--bad)}
+.empty h4,.errbox h4{margin:0 0 6px;font-size:16px}
+.empty p,.errbox p{margin:0 auto 16px;max-width:440px;color:var(--ink2)}
+.errbox .code{font-family:var(--mono);font-size:12px;color:var(--bad);margin-bottom:14px}
+
+/* ------------------------------------------------ anotaciones de integración */
+.attr,.tag{text-transform:none}
+th .attr{letter-spacing:0} body.ann th .attr{display:block;margin-top:2px}
+.tag{display:none;font-size:10.5px;font-weight:700;letter-spacing:.02em;padding:1px 7px;border-radius:999px;white-space:nowrap}
+.attr{display:none;font-family:var(--mono);font-size:10.5px;color:var(--ink3);font-weight:400}
+.pin{display:none;width:20px;height:20px;border-radius:50%;background:#111827;color:#fff;font-size:11px;font-weight:700;place-items:center;flex:none}
+body.ann .tag{display:inline-block} body.ann .attr{display:inline} body.ann .pin{display:inline-grid;vertical-align:middle;margin-right:4px}
+body.ann [data-src]{outline:2px dashed var(--c);outline-offset:3px;border-radius:8px}
+[data-src="SALES-X"]{--c:var(--sales)} [data-src="CRM-X"]{--c:var(--crm)} [data-src="CALC"]{--c:var(--calc)}
+[data-src="EVT"]{--c:var(--evt)} [data-src="OUT"]{--c:var(--out)}
+.tag.sales{background:var(--sales-bg);color:var(--sales)} .tag.crm{background:var(--crm-bg);color:var(--crm)}
+.tag.calc{background:var(--calc-bg);color:var(--calc)} .tag.evt{background:var(--evt-bg);color:var(--evt)} .tag.out{background:var(--out-bg);color:var(--out)}
+.sw{width:12px;height:12px;border-radius:3px;border:2px dashed}
+
+/* ------------------------------------------------ JSON */
+details.json{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+details.json summary{cursor:pointer;padding:9px 12px;font-size:12.5px;font-weight:600;background:#F9FAFB;list-style:none}
+details.json summary::-webkit-details-marker{display:none}
+details.json pre{margin:0;padding:12px;font-family:var(--mono);font-size:11.5px;background:#0F172A;color:#E2E8F0;overflow:auto;max-height:340px}
+body.captura .notes{display:none} body.captura .stage{grid-template-columns:1fr}
+
+@media (max-width:1100px){.stage{grid-template-columns:1fr}.notes{position:static}}
+@media (max-width:760px){.proto{grid-template-columns:1fr}.side{display:none}.g2,.g3,.g4{grid-template-columns:1fr}}
+</style>
+</head>
+<body class="ann">
+<div class="proto">
+  <aside class="side" id="side"></aside>
+  <div class="main">
+    <div class="toolbar">
+      <div class="ttl" id="ttl"></div>
+      <label class="chk"><input type="checkbox" id="ann" checked> Mostrar puntos de integración y atributos</label>
+      <div class="seg" id="estados">
+        <button data-e="normal" class="on">Normal</button>
+        <button data-e="carga">Cargando</button>
+        <button data-e="vacio">Vacío</button>
+        <button data-e="error">Error</button>
+      </div>
+    </div>
+    <div class="stage">
+      <div id="screen"></div>
+      <div class="notes" id="notes"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   LOGISTI-X · Prototipo navegable de mockups
+   Cada pantalla declara: casos de uso, RF, clases/atributos, endpoint y DTO,
+   y sus estados (carga, vacío, error). Las anotaciones (tag/attr/pin) salen
+   del mismo lugar que el diagrama de clases: un campo = un atributo.
+   ========================================================================== */
+
+// ---------- helpers de marcado
+const T = {
+  sales: '<span class="tag sales">← SALES-X</span>',
+  crm:   '<span class="tag crm">← CRM-X</span>',
+  calc:  '<span class="tag calc">calculado en servidor</span>',
+  evt:   (d) => `<span class="tag evt">evento → ${d}</span>`,
+  out:   '<span class="tag out">→ SERVI-X (REST)</span>',
+};
+const A = (a) => `<span class="attr">${a}</span>`;
+const P = (n) => `<span class="pin">${n}</span>`;
+const st = (e) => `<span class="pill st-${e}">${e.replace('_',' ')}</span>`;
+function field(label, value, {attr='', tag='', src='', ro=false, big=false, help='', err='', pin=''} = {}) {
+  return `<div class="f"${src ? ` data-src="${src}"` : ''}>
+    <label>${pin ? P(pin) : ''}${label} ${tag} ${A(attr)}</label>
+    <div class="in${ro ? ' ro' : ''}${big ? ' big' : ''}">${value}</div>
+    ${help ? `<div class="help">${help}</div>` : ''}${err ? `<div class="err">${err}</div>` : ''}
+  </div>`;
+}
+const json = (titulo, obj) => `<details class="json"><summary>{ } ${titulo}</summary><pre>${JSON.stringify(obj, null, 2)}</pre></details>`;
+
+function webFrame(activo, body) {
+  const items = ['Despachos','Nuevo despacho','Trazabilidad','Reportes','Transportadores','Rutas','Integración'];
+  return `<div class="app"><div class="appbar"><div class="logo">LOGISTI<b>-X</b></div>
+    <nav>${items.map(i => `<span class="${i===activo?'on':''}">${i}</span>`).join('')}</nav>
+    <div class="user">Laura Gómez · COORDINADOR</div></div><div class="appbody">${body}</div></div>`;
+}
+function phoneFrame(titulo, sub, body) {
+  return `<div class="phone-wrap"><div class="phone"><div class="pbar"><span>9:41</span><span>LOGISTI-X · Transportador</span></div>
+    <div class="phead"><div class="muted" style="font-size:12px">${sub}</div><div class="t">${titulo}</div></div>
+    <div class="pbody">${body}</div></div></div>`;
+}
+
+// ---------- estados genéricos
+function carga(frame, tipo) {
+  const filas = Array.from({length:6}, () => '<div class="skel" style="height:38px"></div>').join('');
+  const body = `<div class="skel" style="height:28px;width:260px;margin-bottom:20px"></div>
+    <div class="grid" style="gap:10px">${filas}</div>
+    <p class="muted" style="margin-top:14px">Cargando… ${tipo}</p>`;
+  return frame(body);
+}
+function vacio(frame, v) {
+  return frame(`<div class="empty"><div class="ic">∅</div><h4>${v.t}</h4><p>${v.m}</p>${v.cta ? `<button class="btn pri">${v.cta}</button>` : ''}</div>`);
+}
+function error(frame, e) {
+  return frame(`<div class="errbox"><div class="ic">!</div><h4>${e.t}</h4><div class="code">${e.code}</div><p>${e.m}</p>
+    <div class="row" style="justify-content:center">${(e.ctas||['Reintentar']).map((c,i)=>`<button class="btn ${i===0?'pri':''}">${c}</button>`).join('')}</div></div>`);
+}
+
+// ---------- datos de ejemplo (formatos reales: DES-AAAA-NNNNNN, LGX-AAAA-NNNNNN-DV)
+const despachos = [
+  {n:'DES-2026-000131', g:'LGX-2026-000131-1', c:'Ferretería El Tornillo', ciu:'Envigado', e:'EN_RUTA', t:'Carlos Ruiz', kg:'38.400', f:'26/09/2026', i:1},
+  {n:'DES-2026-000129', g:'LGX-2026-000129-1', c:'Distribuciones Aburrá SAS', ciu:'Medellín', e:'ASIGNADO', t:'Diana Mejía', kg:'112.000', f:'26/09/2026', i:0},
+  {n:'DES-2026-000128', g:'LGX-2026-000128-1', c:'Clínica Dental Sonrisa', ciu:'Medellín', e:'FALLIDO', t:'Carlos Ruiz', kg:'4.200', f:'25/09/2026', i:2},
+  {n:'DES-2026-000126', g:'—', c:'Papelería Central', ciu:'Itagüí', e:'EN_PREPARACION', t:'—', kg:'22.750', f:'—', i:0},
+  {n:'DES-2026-000125', g:'—', c:'Tienda Doña Rosa', ciu:'Bello', e:'REGISTRADO', t:'—', kg:'9.600', f:'—', i:0},
+  {n:'DES-2026-000117', g:'LGX-2026-000117-6', c:'Café La Loma', ciu:'Sabaneta', e:'ENTREGADO', t:'Diana Mejía', kg:'15.000', f:'24/09/2026', i:1},
+];
+
+// ============================================================================
+// PANTALLAS
+// ============================================================================
+const S = {};
+
+// ------------------------------------------------------------------ inicio
+S.mapa = {
+  grupo:'Guía', nombre:'Mapa del prototipo', cu:'—', frame:'none', sinEstados:true,
+  normal(){ const filas = ORDEN.filter(k=>k!=='mapa').map(k=>{const s=S[k];return `<tr><td class="mono">${s.cu}</td><td><a href="#${k}" onclick="ir('${k}');return false">${s.nombre}</a></td><td>${esc(s.rf||'—')}</td><td class="mono">${s.api||'—'}</td></tr>`}).join('');
+    return `<div class="app"><div class="appbody">
+      <div class="h"><h2>Mockups de LOGISTI-X · cómo leer este prototipo</h2></div>
+      <div class="grid g2">
+        <div class="box"><h4>Qué es</h4><p style="margin:0">Prototipo navegable de fidelidad media: una pantalla por caso de uso del diagrama de casos de uso, con los mismos nombres de campo que los atributos del diagrama de clases. Arriba se cambia el <b>estado</b> de cada pantalla (normal, cargando, vacío, error) y se prenden o apagan las <b>anotaciones</b>.</p></div>
+        <div class="box"><h4>Cómo se lee una anotación</h4><div class="legend">
+          <span><i class="sw" style="border-color:var(--sales)"></i><b>← SALES-X</b>&nbsp;dato que llega del sistema de ventas</span>
+          <span><i class="sw" style="border-color:var(--crm)"></i><b>← CRM-X</b>&nbsp;dato que llega del CRM</span>
+          <span><i class="sw" style="border-color:var(--calc)"></i><b>calculado en servidor</b>&nbsp;no se escribe a mano (RN-11)</span>
+          <span><i class="sw" style="border-color:var(--evt)"></i><b>evento →</b>&nbsp;la acción publica a otro sistema</span>
+          <span><i class="sw" style="border-color:var(--out)"></i><b>→ SERVI-X</b>&nbsp;lo que se expone por REST</span>
+          <span><span class="mono muted">Despacho.numeroGuia</span>&nbsp;atributo del diagrama de clases</span></div></div>
+      </div><div class="spacer"></div>
+      <div class="box" style="padding:0"><table class="t"><thead><tr><th>Caso de uso</th><th>Pantalla</th><th>RF</th><th>Servicio REST</th></tr></thead><tbody>${filas}</tbody></table></div>
+    </div></div>`; },
+  notas:'Empiece por «Tablero de despachos» y siga el orden del menú: es el ciclo de vida del despacho, de REGISTRADO a ENTREGADO.'
+};
+
+// ------------------------------------------------------------------ acceso
+S.acceso = {
+  grupo:'Soporte', nombre:'Acceso', cu:'CU-S1', rf:'RNF-03', api:'POST /api/v1/auth/login', dto:'AuthControlador.Login → JWT', clases:'Usuario (rol)',
+  frame:'none',
+  normal(){ return `<div class="app"><div class="appbody" style="display:grid;place-items:center;min-height:520px;background:#F8FAFC">
+      <div class="box" style="width:360px;background:#fff">
+        <div class="logo" style="font-size:22px;margin-bottom:4px">LOGISTI<b>-X</b></div>
+        <p class="muted" style="margin:0 0 18px">Gestión de despachos y entregas · INTEGRAX</p>
+        <div class="grid">${field('Usuario','coordinador',{attr:'Usuario.usuario'})}
+        ${field('Contraseña','••••••••••',{attr:'Usuario.claveHash (bcrypt)'})}
+        <button class="btn pri" style="justify-content:center">Ingresar</button>
+        <p class="help muted" style="margin:0">El rol del token (COORDINADOR, TRANSPORTADOR, ADMIN, CONSULTA) decide qué botones aparecen en cada pantalla.</p></div>
+      </div></div></div>`; },
+  error:{t:'Usuario o contraseña incorrectos',code:'401 Unauthorized',m:'Revise los datos. Después de varios intentos fallidos el acceso se bloquea unos minutos.',ctas:['Volver a intentar']},
+  vacio:null,
+  pins:[],
+  notas:'No es un caso del enunciado; es el caso de soporte que protege todos los demás (JWT por rol).'
+};
+
+// ------------------------------------------------------------------ CU-13 tablero
+S.tablero = {
+  grupo:'4 · Consulta y control', nombre:'Tablero de despachos', cu:'CU-13', rf:'RF-02, RF-03', api:'GET /api/v1/despachos?estado=&ciudad=&q=', dto:'Pagina<DespachoResumen>',
+  clases:'Despacho, Transportador (vía DespachoResumen.de)', frame:'web', activo:'Despachos',
+  normal(){ const filas = despachos.map(d=>`<tr><td class="mono">${d.n}</td><td class="mono">${d.g}</td><td>${d.c}</td><td>${d.ciu}</td><td>${st(d.e)}</td><td>${d.t}</td><td class="num">${d.kg}</td><td>${d.f}</td><td class="num">${d.i}/3</td></tr>`).join('');
+    return webFrame('Despachos', `<div class="crumbs">Despachos</div>
+      <div class="h"><h2>Tablero de despachos</h2><span class="pill st-EN_RUTA">En vivo</span>
+        <div class="act"><button class="btn">Exportar</button><button class="btn pri">+ Nuevo despacho</button></div></div>
+      <div class="grid g4" style="margin-bottom:16px">
+        <div class="kpi"><div class="v">6</div><div class="l">Despachos activos</div></div>
+        <div class="kpi"><div class="v">1</div><div class="l">En ruta ahora</div></div>
+        <div class="kpi" data-src="CALC"><div class="v">202,0 kg</div><div class="l">Peso total en operación ${T.calc}</div></div>
+        <div class="kpi"><div class="v">1</div><div class="l">Fallidos por resolver</div></div></div>
+      <div class="filters"><span class="in">🔍 Número, guía o cliente</span><span class="in">Estado: todos ▾</span><span class="in">Ciudad: todas ▾</span><span class="in">Transportador: todos ▾</span></div>
+      <div class="box" style="padding:0"><table class="t"><thead><tr>
+        <th>Número ${A('numero')}</th><th>Guía ${A('numeroGuia')}</th><th>Cliente ${A('clienteNombre')}</th><th>Ciudad ${A('ciudadEntrega')}</th><th>Estado ${A('estado')}</th><th>Transportador ${A('transportadorNombre')}</th><th class="num">Peso kg ${A('pesoTotalKg')}</th><th>Entrega est. ${A('fechaEstimadaEntrega')}</th><th class="num">Intentos ${A('intentosEntrega')}</th>
+      </tr></thead><tbody>${filas}</tbody></table></div>
+      <p class="help muted" style="margin-top:10px">El tablero se actualiza solo por SSE (<span class="mono">GET /api/v1/eventos</span>) cuando otro usuario o SALES-X cambia un despacho.</p>
+      ${json('DespachoResumen (una fila) · derivado de Despacho', {despachoId:'7c1e…', numero:'DES-2026-000131', numeroGuia:'LGX-2026-000131-1', pedidoId:'a41f…', pedidoNumero:'PED-2026-0418', clienteNombre:'Ferretería El Tornillo', ciudadEntrega:'Envigado', estado:'EN_RUTA', transportadorNombre:'Carlos Ruiz', pesoTotalKg:38.4, costoFlete:18500, fechaEstimadaEntrega:'2026-09-26', intentosEntrega:1, lineas:3})}`); },
+  vacio:{t:'Todavía no hay despachos',m:'Cuando SALES-X tenga pedidos listos para despachar, regístrelos aquí. Si filtró la búsqueda, quite los filtros.',cta:'+ Registrar el primer despacho'},
+  error:{t:'No se pudo cargar el tablero',code:'503 · LOGISTI-X no responde',m:'El servicio de despachos no contestó. Lo que ya estaba en pantalla no se perdió.',ctas:['Reintentar']},
+  pins:[['CALC','Peso total: suma de Despacho.pesoTotalKg, lo calcula el servidor.']],
+  notas:'Una fila = un DespachoResumen. Cada columna es un atributo de Despacho (se ve en gris cuando las anotaciones están prendidas).'
+};
+
+// ------------------------------------------------------------------ CU-01 registrar
+S.registrar = {
+  grupo:'1 · Preparación', nombre:'Registrar despacho', cu:'CU-01 (+CI-1, CI-2, CI-4)', rf:'RF-01, RF-02', api:'GET SALES-X /pedidos/{id} · GET CRM-X /clientes/{id} · POST /api/v1/despachos', dto:'PedidoExterno, ClienteExterno → CrearDespacho → DespachoDetalle',
+  clases:'Despacho, DespachoItem, PedidoExterno, LineaPedidoExterna, ClienteExterno', frame:'web', activo:'Nuevo despacho',
+  normal(){ return webFrame('Nuevo despacho', `<div class="crumbs">Despachos / Nuevo</div>
+      <div class="h"><h2>Registrar despacho</h2></div>
+      <div class="stepper"><span class="ok">1 · Pedido de SALES-X</span><span class="on">2 · Destino y carga</span><span>3 · Confirmar</span></div>
+      <div class="banner ok">✓ Pedido <b>PED-2026-0418</b> encontrado en SALES-X, en estado <b>APROBADO</b> (despachable, RN-09). No tiene otro despacho vivo (RN-08).</div>
+      <div class="grid g2">
+        <div class="box"><h4>${P(1)} Pedido y cliente</h4><div class="grid g2">
+          ${field('Número de pedido','PED-2026-0418',{attr:'Despacho.pedidoNumero',tag:T.sales,src:'SALES-X',ro:true})}
+          ${field('Estado en SALES-X','APROBADO',{attr:'PedidoExterno.estado',tag:T.sales,src:'SALES-X',ro:true})}
+          ${field('Cliente','Ferretería El Tornillo',{attr:'Despacho.clienteNombre',tag:T.sales,src:'SALES-X',ro:true})}
+          ${field('Documento','NIT 900.456.123-4',{attr:'Despacho.clienteDocumento',tag:T.sales,src:'SALES-X',ro:true})}
+        </div></div>
+        <div class="box"><h4>${P(2)} Destino de la entrega</h4><div class="grid g2">
+          ${field('Dirección','Cra. 43A # 38 Sur-45',{attr:'Despacho.direccionEntrega',tag:T.crm,src:'CRM-X',help:'Traída de CRM-X; se puede corregir antes de alistar (CU-02).'})}
+          ${field('Ciudad','Envigado',{attr:'Despacho.ciudadEntrega',tag:T.crm,src:'CRM-X'})}
+          ${field('Departamento','Antioquia',{attr:'Despacho.departamentoEntrega',tag:T.crm,src:'CRM-X'})}
+          ${field('Teléfono','304 555 0182',{attr:'Despacho.clienteTelefono',tag:T.crm,src:'CRM-X'})}
+          ${field('Referencia','Local 3, junto a la estación',{attr:'Despacho.referenciaDireccion'})}
+          ${field('Observaciones','Recibir en horario de 8 a 12',{attr:'Despacho.observaciones'})}
+        </div></div>
+      </div><div class="spacer"></div>
+      <div class="box" style="padding:0"><div style="padding:14px 16px 0"><h4>${P(3)} Carga a despachar</h4></div><table class="t"><thead><tr>
+        <th>#</th><th>SKU ${A('DespachoItem.productoSku')}</th><th>Producto ${A('productoNombre')}</th><th class="num">En el pedido ${T.sales}</th><th class="num">A despachar ${A('cantidad')}</th><th class="num">Peso unit. kg ${A('pesoUnitarioKg')}</th><th class="num">Peso línea ${A('pesoLineaKg')}</th><th class="num">Valor línea ${A('valorLinea')}</th></tr></thead><tbody>
+        <tr><td>1</td><td class="mono">TOR-3/8</td><td>Tornillo 3/8" x 100 u.</td><td class="num">12</td><td class="num"><b>12</b></td><td class="num">1.200</td><td class="num" data-src="CALC">14.400</td><td class="num" data-src="CALC">$ 540.000</td></tr>
+        <tr><td>2</td><td class="mono">PIN-GAL</td><td>Pintura blanca galón</td><td class="num">4</td><td class="num"><b>4</b></td><td class="num">5.000</td><td class="num" data-src="CALC">20.000</td><td class="num" data-src="CALC">$ 312.000</td></tr>
+        <tr><td>3</td><td class="mono">BRO-2</td><td>Brocha 2"</td><td class="num">10</td><td class="num"><b>8</b></td><td class="num">0.500</td><td class="num" data-src="CALC">4.000</td><td class="num" data-src="CALC">$ 96.000</td></tr>
+      </tbody></table>
+      <div class="row" style="padding:12px 16px;border-top:1px solid var(--line);justify-content:flex-end;gap:24px" data-src="CALC">${T.calc}
+        <span>Unidades <b>24</b> ${A('unidadesTotales')}</span><span>Peso <b>38,400 kg</b> ${A('pesoTotalKg')}</span><span>Valor declarado <b>$ 948.000</b> ${A('valorDeclarado')}</span></div></div>
+      <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn">Cancelar</button><button class="btn pri">Registrar despacho</button></div>
+      ${json('Respuesta de SALES-X · PedidoExterno', {pedidoId:'a41f…', numero:'PED-2026-0418', clienteId:'5b2c…', clienteNombre:'Ferretería El Tornillo', clienteDocumento:'900456123', estado:'APROBADO', total:948000, items:[{productoId:'…', sku:'TOR-3/8', nombre:'Tornillo 3/8" x 100 u.', cantidad:12, precioUnitario:45000, pesoUnitarioKg:1.2}]})}
+      ${json('Solicitud que envía la pantalla · CrearDespacho', {pedidoId:'a41f…', direccionEntrega:'Cra. 43A # 38 Sur-45', ciudadEntrega:'Envigado', departamentoEntrega:'Antioquia', referenciaDireccion:'Local 3, junto a la estación', observaciones:'Recibir en horario de 8 a 12', items:[{productoId:'…', cantidad:12},{productoId:'…', cantidad:4},{productoId:'…', cantidad:8}]})}`); },
+  vacio:{t:'El pedido no tiene líneas para despachar',m:'SALES-X devolvió el pedido sin productos, o todas sus líneas ya salieron en otro despacho. No hay nada que registrar.',cta:'Buscar otro pedido'},
+  error:{t:'SALES-X no respondió',code:'502 Bad Gateway · IntegracionException (ventas)',m:'No se pudo validar el pedido PED-2026-0418 en SALES-X. El despacho no se registra con datos sin validar: reintente o revise el diagnóstico de integración.',ctas:['Reintentar','Ver diagnóstico (CU-20)']},
+  pins:[['SALES-X','1. Pedido y cliente: vienen de PuertoVentas.obtener() → PedidoExterno. Solo lectura.'],['CRM-X','2. Dirección y teléfono: PuertoClientes.obtener() → ClienteExterno. Editables (CU-02).'],['CALC','3. Peso, valor y unidades los recalcula Despacho.recalcularCarga() en el servidor (RN-11).']],
+  notas:'Incluye CI-1 (validar pedido en SALES-X), CI-2 (dirección en CRM-X) y CI-4 (calcular peso y valor): por eso son «include», siempre ocurren.'
+};
+
+// ------------------------------------------------------------------ detalle (CU-02, 03, 04, 12)
+S.detalle = {
+  grupo:'1 · Preparación', nombre:'Detalle: corregir, ajustar, alistar, cancelar', cu:'CU-02, CU-03, CU-04, CU-12', rf:'RF-01, RF-04', api:'PATCH /despachos/{id} · /despachos/{id}/items · POST …/preparar · POST …/cancelar', dto:'ActualizarDestino, LineaCarga, CambiarCantidad, MotivoSolicitud → DespachoDetalle',
+  clases:'Despacho, DespachoItem, EstadoDespacho.esEditable()', frame:'web', activo:'Despachos',
+  normal(){ return webFrame('Despachos', `<div class="crumbs">Despachos / DES-2026-000126</div>
+      <div class="h"><h2>DES-2026-000126</h2>${st('EN_PREPARACION')}<span class="muted">Papelería Central · Itagüí</span>
+        <div class="act"><button class="btn danger">${P(3)} Cancelar despacho</button><button class="btn pri">Asignar transportador →</button></div></div>
+      <div class="banner info">Este despacho todavía es <b>editable</b> (REGISTRADO o EN_PREPARACION, RN-01). Cuando se asigne transportador, destino y carga quedan congelados.</div>
+      <div class="grid g2">
+        <div class="box"><h4>${P(1)} Destino · CU-02</h4><div class="grid g2">
+          ${field('Dirección','Calle 50 # 51-20',{attr:'Despacho.direccionEntrega',tag:T.crm,src:'CRM-X'})}
+          ${field('Ciudad','Itagüí',{attr:'Despacho.ciudadEntrega'})}
+          ${field('Teléfono','311 555 0147',{attr:'Despacho.clienteTelefono'})}
+          ${field('Referencia','Frente al parque principal',{attr:'Despacho.referenciaDireccion'})}
+        </div><div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn">Guardar destino</button></div></div>
+        <div class="box"><h4>Resumen</h4><div class="grid g2">
+          ${field('Pedido','PED-2026-0409',{attr:'Despacho.pedidoNumero',tag:T.sales,src:'SALES-X',ro:true})}
+          ${field('Creado por','laura.gomez · 25/09 08:12',{attr:'creadoPor · creadoEn',ro:true})}
+          ${field('Peso total','22,750 kg',{attr:'Despacho.pesoTotalKg',tag:T.calc,src:'CALC',ro:true})}
+          ${field('Valor declarado','$ 410.500',{attr:'Despacho.valorDeclarado',tag:T.calc,src:'CALC',ro:true})}
+        </div></div>
+      </div><div class="spacer"></div>
+      <div class="box" style="padding:0"><div class="row" style="padding:14px 16px 0"><h4 style="margin:0">${P(2)} Carga · CU-03</h4><span class="help muted">No se puede despachar más de lo que tiene el pedido (RN-13).</span><button class="btn" style="margin-left:auto">+ Agregar línea</button></div>
+        <table class="t" style="margin-top:10px"><thead><tr><th>#</th><th>SKU</th><th>Producto</th><th class="num">Cantidad ${A('DespachoItem.cantidad')}</th><th class="num">Peso línea ${A('pesoLineaKg')}</th><th></th></tr></thead><tbody>
+          <tr><td>1</td><td class="mono">CUA-100</td><td>Cuaderno 100 hojas</td><td class="num">50</td><td class="num">17.500</td><td class="num"><button class="btn">Cambiar</button> <button class="btn danger">Quitar</button></td></tr>
+          <tr><td>2</td><td class="mono">LAP-HB</td><td>Lápiz HB x 12</td><td class="num">35</td><td class="num">5.250</td><td class="num"><button class="btn">Cambiar</button> <button class="btn danger">Quitar</button></td></tr>
+        </tbody></table></div>
+      <div class="row" style="justify-content:space-between;margin-top:16px">
+        <span class="help muted">Alistar (CU-04) pasa REGISTRADO → EN_PREPARACION y exige al menos una línea (RN-02). Este ya está alistado.</span>
+        <button class="btn" disabled>✓ Carga alistada</button></div>
+      <div class="modal-back" style="margin-top:20px"><div class="modal"><h3>${P(3)} ¿Cancelar DES-2026-000126?</h3>
+        <p class="muted">El pedido PED-2026-0409 queda libre para otro despacho. SALES-X recibe el aviso.</p>
+        ${field('Motivo (obligatorio)','El cliente pidió aplazar la compra',{attr:'Despacho.motivoCancelacion',big:true})}
+        <div class="row" style="margin-top:12px" data-src="EVT">${T.evt('SALES-X')} <span class="help">publica <span class="mono">despacho.cancelado</span> por la bandeja de salida</span></div>
+        <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn">Volver</button><button class="btn danger">Cancelar despacho</button></div></div></div>`); },
+  vacio:{t:'Este despacho no tiene carga',m:'No se puede alistar un despacho vacío (RN-02). Agregue al menos una línea del pedido.',cta:'+ Agregar línea'},
+  error:{t:'No se puede modificar',code:'409 Conflict · ReglaNegocioException RN-01',m:'El despacho ya está ASIGNADO: el destino y la carga quedaron congelados con la guía. Si hay un error, cancélelo y registre uno nuevo.',ctas:['Entendido']},
+  pins:[['CRM-X','1. La dirección vino de CRM-X; aquí se corrige sin tocar el CRM (la diferencia se traduce en la frontera).'],['CALC','2. Cada cambio de cantidad dispara recalcularCarga(): el peso y el valor nunca se digitan.'],['EVT','3. Cancelar publica despacho.cancelado → SALES-X libera el pedido.']],
+  notas:'Una sola pantalla atiende cuatro casos de uso porque comparten el mismo objeto (el Despacho editable). Los botones se habilitan según EstadoDespacho.esEditable() y permitePasarA().'
+};
+
+// ------------------------------------------------------------------ CU-05 asignar
+S.asignar = {
+  grupo:'2 · Distribución', nombre:'Asignar transportador y generar guía', cu:'CU-05 (+CI-3, CI-4)', rf:'RF-05, RF-07', api:'POST /api/v1/despachos/{id}/asignar', dto:'AsignarTransportador → GuiaGenerada',
+  clases:'Despacho.asignar(), Transportador.puedeCargar(), Ruta.fechaEstimadaDesde(), GuiaServicio', frame:'web', activo:'Despachos',
+  normal(){ return webFrame('Despachos', `<div class="crumbs">Despachos / DES-2026-000129 / Asignar</div>
+      <div class="h"><h2>Asignar transportador</h2>${st('EN_PREPARACION')}<span class="muted">Distribuciones Aburrá SAS · 112,000 kg</span></div>
+      <div class="grid g2">
+        <div class="box"><h4>${P(1)} Transportador</h4><table class="t"><thead><tr><th></th><th>Nombre ${A('Transportador.nombre')}</th><th>Vehículo ${A('tipoVehiculo · placa')}</th><th class="num">Capacidad ${A('capacidadKg')}</th><th>Zona</th></tr></thead><tbody>
+          <tr style="opacity:.55"><td>○</td><td>Carlos Ruiz</td><td>MOTO · XYZ12E</td><td class="num">100 kg</td><td>Sur</td></tr>
+          <tr style="background:var(--brand-2)"><td>●</td><td><b>Diana Mejía</b></td><td>CAMIONETA · GHT-482</td><td class="num">800 kg</td><td>Centro</td></tr>
+          <tr><td>○</td><td>Andrés Posada</td><td>CAMION · SNK-219</td><td class="num">3.500 kg</td><td>Norte</td></tr></tbody></table>
+          <p class="err" style="margin:10px 0 0">Carlos Ruiz no aparece seleccionable: 112 kg no caben en 100 kg (RN-12, Transportador.puedeCargar()).</p></div>
+        <div class="box"><h4>${P(2)} Ruta y fecha</h4><div class="grid">
+          ${field('Ruta','MED-CEN · Medellín centro (1 día · tarifa $ 12.000)',{attr:'Despacho.ruta → Ruta.codigo'})}
+          ${field('Fecha estimada de entrega','26/09/2026',{attr:'Despacho.fechaEstimadaEntrega',tag:T.calc,src:'CALC',help:'Ruta.fechaEstimadaDesde(hoy): hoy + diasEstimados.'})}
+          ${field('Costo del flete','$ 23.200',{attr:'Despacho.costoFlete',tag:T.calc,src:'CALC',ro:true,help:'tarifaBase + 100 $/kg × pesoTotalKg (recalcularFlete).'})}
+        </div></div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn">Volver</button><button class="btn pri">Asignar y generar guía</button></div>
+      <div class="banner ok" style="margin-top:16px" data-src="CALC">${P(3)} ✓ Guía generada: <b class="mono">LGX-2026-000129-1</b> ${T.calc} ${A('Despacho.numeroGuia · GuiaServicio.generar()')} — el último dígito es de verificación (módulo 11, como el NIT). La guía ya no cambia (RN-03).</div>
+      ${json('Solicitud · AsignarTransportador', {transportadorId:'d91a…', rutaId:'3f0c…', fechaEstimadaEntrega:'2026-09-26'})}
+      ${json('Respuesta · GuiaGenerada', {despachoId:'…', numeroGuia:'LGX-2026-000129-1', transportador:'Diana Mejía', fechaEstimadaEntrega:'2026-09-26', rotulo:'LGX-2026-000129-1 | Distribuciones Aburrá SAS | Cl. 30 # 65-120 | Medellín | Diana Mejía'})}`); },
+  vacio:{t:'No hay transportadores activos con capacidad suficiente',m:'Ningún transportador activo puede llevar 112 kg en la zona. Active uno o registre un vehículo más grande (CU-17).',cta:'Ir a transportadores'},
+  error:{t:'La carga no cabe en el vehículo',code:'422 · ReglaNegocioException RN-12',m:'El transportador elegido tiene 100 kg de capacidad y el despacho pesa 112 kg. Elija otro vehículo.',ctas:['Elegir otro']},
+  pins:[['CALC','1–2. Fecha y flete los calcula el servidor con la Ruta elegida (CI-4).'],['CALC','3. La guía sale de GuiaServicio (CI-3, «include» de CU-05): formato LGX-AAAA-NNNNNN-DV.']],
+  notas:'CU-06 (imprimir la guía) extiende este caso: solo ocurre si el coordinador pide el rótulo. Por eso es «extend» y no «include».'
+};
+
+// ------------------------------------------------------------------ CU-06 guía
+S.guia = {
+  grupo:'2 · Distribución', nombre:'Consultar e imprimir la guía', cu:'CU-06 «extend» CU-05', rf:'RF-07', api:'GET /api/v1/despachos/{id}/guia', dto:'GuiaGenerada.rotulo',
+  clases:'Despacho.numeroGuia, GuiaServicio.rotulo(), GuiaServicio.esValida()', frame:'web', activo:'Despachos',
+  normal(){ return webFrame('Despachos', `<div class="crumbs">Despachos / DES-2026-000129 / Guía</div>
+      <div class="h"><h2>Rótulo de envío</h2>${st('ASIGNADO')}<div class="act"><button class="btn">Descargar PDF</button><button class="btn pri">Imprimir</button></div></div>
+      <div class="grid g2"><div class="label-guia">
+        <div style="font-weight:700;font-size:13px">LOGISTI-X · INTEGRAX</div>
+        <div class="barcode"></div>
+        <div style="font-size:20px;font-weight:700" data-src="CALC">LGX-2026-000129-1 ${A('numeroGuia')}</div>
+        <hr style="border:0;border-top:1px dashed #999;margin:12px 0">
+        <div>PARA: Distribuciones Aburrá SAS ${A('clienteNombre')}</div>
+        <div>Cl. 30 # 65-120, Medellín ${A('direccionEntrega')}</div>
+        <div>Tel. 604 555 0190 ${A('clienteTelefono')}</div>
+        <hr style="border:0;border-top:1px dashed #999;margin:12px 0">
+        <div>TRANSPORTA: Diana Mejía · GHT-482</div><div>PESO: 112,000 kg · 3 bultos</div><div>ENTREGA EST.: 26/09/2026</div>
+      </div>
+      <div class="box"><h4>Validación de la guía</h4>
+        <div class="check"><i class="y">✓</i>Formato LGX-AAAA-NNNNNN-D correcto</div>
+        <div class="check"><i class="y">✓</i>Dígito de verificación 1 coincide (GuiaServicio.esValida)</div>
+        <div class="check"><i class="y">✓</i>Guía única en el sistema</div>
+        <p class="help muted">El transportador y el rol CONSULTA también ven esta pantalla, en solo lectura.</p></div></div>`); },
+  vacio:{t:'Este despacho aún no tiene guía',m:'La guía se genera al asignar transportador (CU-05). Todavía está EN_PREPARACION.',cta:'Asignar transportador'},
+  error:{t:'Guía no encontrada',code:'404 · RecursoNoEncontradoException',m:'No existe un despacho con la guía LGX-2026-000999-4. Revise el número (el último dígito es de verificación).',ctas:['Buscar de nuevo']},
+  pins:[['CALC','El número de guía lo genera y valida el servidor: nadie lo digita.']],
+  notas:'Extend: el rótulo solo se imprime si alguien lo pide; la asignación (CU-05) está completa sin él.'
+};
+
+// ------------------------------------------------------------------ CU-07 sacar a ruta
+S.ruta = {
+  grupo:'2 · Distribución', nombre:'Sacar la carga a ruta', cu:'CU-07 (+CI-5)', rf:'RF-04', api:'POST /api/v1/despachos/{id}/despachar', dto:'Despachar → DespachoDetalle · evento despacho.en-ruta',
+  clases:'Despacho.despachar(), OutboxEvento, RegistradorEventos.despachoEnRuta()', frame:'web', activo:'Despachos',
+  normal(){ return webFrame('Despachos', `<div class="crumbs">Despachos / DES-2026-000129</div>
+      <div class="h"><h2>DES-2026-000129</h2>${st('ASIGNADO')}<span class="muted">Diana Mejía · LGX-2026-000129-1</span></div>
+      <div class="modal-back"><div class="modal"><h3>Sacar a ruta</h3>
+        <p class="muted">Confirme que la carga salió de bodega con el transportador.</p>
+        <div class="check"><i class="y">✓</i>Tiene número de guía (RN-04)</div>
+        <div class="check"><i class="y">✓</i>Tiene transportador asignado (RN-04)</div>
+        <div class="check"><i class="y">✓</i>Transición ASIGNADO → EN_RUTA permitida (RN-07)</div>
+        ${field('Ubicación de salida','Bodega principal · Itagüí',{attr:'HistorialEstadoDespacho.ubicacion'})}
+        <div class="banner warn" style="margin-top:14px" data-src="EVT">${P(1)} ${T.evt('SALES-X')} Al confirmar, SALES-X recibe el pedido PED-2026-0417 en estado <b>DESPACHADO</b>. Si SALES-X está caído, el aviso queda en la bandeja y se reintenta: el despacho sale igual.</div>
+        <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn">Volver</button><button class="btn pri">Confirmar salida</button></div></div></div>
+      ${json('Evento guardado en la bandeja · SobreEvento', {eventoId:'e3b1…', tipo:'despacho.en-ruta', version:1, origen:'LOGISTI-X', ocurridoEn:'2026-09-25T09:30:00-05:00', datos:{despachoId:'…', numero:'DES-2026-000129', numeroGuia:'LGX-2026-000129-1', pedidoId:'…', estado:'EN_RUTA', transportador:'Diana Mejía'}})}`); },
+  vacio:null,
+  error:{t:'No se puede sacar a ruta',code:'409 · ReglaNegocioException RN-04',m:'El despacho no tiene transportador ni guía. Asígnelo primero (CU-05).',ctas:['Asignar transportador']},
+  pins:[['EVT','1. CI-5 «include»: sacar a ruta SIEMPRE publica el cambio a SALES-X (bandeja de salida con reintentos, no compensación).']],
+  notas:'El despacho no espera a SALES-X: el evento queda en la bandeja (OutboxEvento PENDIENTE) y PublicadorEventos lo reintenta.'
+};
+
+// ------------------------------------------------------------------ app móvil: mis entregas + CU-08
+S.entregar = {
+  grupo:'3 · Entrega en calle', nombre:'App: confirmar entrega', cu:'CU-08 (+CI-5)', rf:'RF-09', api:'POST /api/v1/despachos/{id}/entregar', dto:'ConfirmarEntrega → DespachoDetalle · evento despacho.entregado',
+  clases:'Despacho.entregar(), OutboxEvento', frame:'movil',
+  normal(){ return phoneFrame('Confirmar entrega','DES-2026-000131 · 1 de 3 intentos', `
+      <div class="tile"><div style="font-weight:700">Ferretería El Tornillo</div><div class="muted">Cra. 43A # 38 Sur-45, Envigado ${A('direccionEntrega')}</div><div class="muted">3 bultos · 38,4 kg</div></div>
+      ${field('Nombre de quien recibe *','Jorge Álvarez',{attr:'Despacho.receptorNombre',pin:'1',help:'Obligatorio: no hay entrega sin receptor (RN-05).'})}
+      ${field('Documento','71.234.567',{attr:'Despacho.receptorDocumento'})}
+      ${field('Observación','Recibido completo, sin novedad',{attr:'Despacho.observacionEntrega'})}
+      ${field('Ubicación','6.1702, -75.5901 (GPS)',{attr:'HistorialEstadoDespacho.ubicacion',ro:true})}
+      <div class="banner warn" data-src="EVT">${P(2)} ${T.evt('SALES-X y FINAN-X')} Pedido → ENTREGADO en SALES-X; FINAN-X recibe despacho.entregado para cerrar el cobro.</div>
+      <button class="btn pri">Confirmar entrega</button>
+      <button class="btn">No pude entregar → registrar novedad</button>`) +
+      json('Solicitud · ConfirmarEntrega', {receptorNombre:'Jorge Álvarez', receptorDocumento:'71234567', observacion:'Recibido completo, sin novedad', ubicacion:'6.1702,-75.5901'}) +
+      json('Evento para FINAN-X · despacho.entregado', {eventoId:'…', tipo:'despacho.entregado', version:1, origen:'LOGISTI-X', ocurridoEn:'2026-09-25T15:42:10-05:00', datos:{despachoId:'…', numero:'DES-2026-000131', numeroGuia:'LGX-2026-000131-1', pedidoId:'…', estado:'ENTREGADO', receptorNombre:'Jorge Álvarez', entregadoEn:'2026-09-25T15:42:10-05:00', costoFlete:18500, items:[{sku:'TOR-3/8', cantidad:12, pesoLineaKg:14.4}]}}); },
+  vacio:{t:'No tiene entregas pendientes hoy',m:'Cuando el coordinador le asigne despachos y los saque a ruta, aparecerán aquí.',cta:null},
+  error:{t:'Falta el nombre de quien recibió',code:'400 · entregaSinReceptorSeRechaza (RN-05)',m:'Sin el nombre del receptor la entrega no se registra. Pídale el nombre a quien recibe.',ctas:['Corregir']},
+  pins:[['—','1. receptorNombre es la prueba de entrega; el servidor la exige aunque la app también la valide.'],['EVT','2. CI-5 «include»: toda entrega publica a SALES-X y FINAN-X.']],
+  notas:'El botón «No pude entregar» es el punto de extensión «entrega no posible»: ahí CU-09 extiende a CU-08.'
+};
+
+// ------------------------------------------------------------------ CU-09 novedad
+S.novedad = {
+  grupo:'3 · Entrega en calle', nombre:'App: registrar novedad', cu:'CU-09 «extend» CU-08', rf:'RF-08', api:'POST /api/v1/despachos/{id}/novedades', dto:'RegistrarNovedad → NovedadDetalle',
+  clases:'Novedad, TipoNovedad.bloqueaPorDefecto(), Despacho.registrarNovedad()', frame:'movil',
+  normal(){ return phoneFrame('Registrar novedad','DES-2026-000128 · Clínica Dental Sonrisa', `
+      <div class="f"><label>${P(1)} ¿Qué pasó? ${A('Novedad.tipo : TipoNovedad')}</label>
+        <div class="chips"><span>Dirección errada</span><span class="on">Cliente ausente</span><span>Cliente rechaza</span><span>Demora en vía</span><span>Avería del vehículo</span><span>Carga averiada</span><span>Zona de riesgo</span><span>Datos incompletos</span><span>Otra</span></div></div>
+      ${field('Descripción','Nadie abre en el consultorio; portería dice que vuelven a las 2 p. m.',{attr:'Novedad.descripcion',big:true})}
+      ${field('Ubicación','6.2442, -75.5812 (GPS)',{attr:'Novedad.ubicacion',ro:true})}
+      <div class="tile" data-src="CALC"><div class="row"><b>Bloquea la entrega</b> ${T.calc}</div><div class="muted" style="font-size:13px">CLIENTE_AUSENTE bloquea por defecto: el despacho pasa a <b>FALLIDO</b> (RN-10) ${A('Novedad.bloqueante')}</div></div>
+      <button class="btn pri">Registrar novedad</button>
+      <div class="banner info">Después podrá <b>reprogramar</b> (quedan 1 de 3 intentos) o el coordinador <b>devolverá</b> la carga.</div>`) +
+      json('Solicitud · RegistrarNovedad', {tipo:'CLIENTE_AUSENTE', descripcion:'Nadie abre en el consultorio…', ubicacion:'6.2442,-75.5812', bloqueante:null});
+  },
+  vacio:null,
+  error:{t:'El despacho no está en ruta',code:'409 · RN-07 transición no permitida',m:'Solo se registran novedades de un despacho EN_RUTA. Este ya fue ENTREGADO.',ctas:['Volver a mis entregas']},
+  pins:[['—','1. Los tipos son exactamente la enumeración TipoNovedad del diagrama de clases.'],['CALC','Si «bloqueante» llega vacío, lo decide TipoNovedad.bloqueaPorDefecto().']],
+  notas:'Tiene su propio punto de extensión «novedad bloqueante», donde se enganchan CU-10 (reprogramar) y CU-11 (devolver).'
+};
+
+// ------------------------------------------------------------------ CU-10 reprogramar
+S.reprogramar = {
+  grupo:'3 · Entrega en calle', nombre:'App: reprogramar entrega', cu:'CU-10 «extend» CU-09', rf:'RF-04', api:'POST /api/v1/despachos/{id}/reprogramar', dto:'Reprogramar → DespachoDetalle',
+  clases:'Despacho.reprogramar(), intentosEntrega', frame:'movil',
+  normal(){ return phoneFrame('Reprogramar entrega','DES-2026-000128 · FALLIDO', `
+      <div class="tile"><div class="row"><b>Intentos</b><span style="margin-left:auto" class="mono">2 de 3</span></div><div class="bar" style="margin-top:8px"><i style="width:66%"></i></div><div class="muted" style="font-size:12.5px;margin-top:6px">${A('Despacho.intentosEntrega · máximo 3 (RN-06)')}</div></div>
+      ${field('Nueva fecha de entrega','26/09/2026 · 2:00 p. m.',{attr:'Despacho.fechaEstimadaEntrega'})}
+      ${field('Motivo','Cliente pidió volver en la tarde',{attr:'HistorialEstadoDespacho.motivo'})}
+      <div class="banner info">El despacho vuelve a <b>EN_RUTA</b> (FALLIDO → EN_RUTA). Este será el <b>último intento</b>: si falla, el coordinador devuelve la carga.</div>
+      <button class="btn pri">Reprogramar</button>`); },
+  vacio:null,
+  error:{t:'Se agotaron los intentos',code:'409 · ReglaNegocioException RN-06',m:'Este despacho ya tuvo 3 intentos. Ya no se reprograma: el coordinador debe devolver la carga (CU-11).',ctas:['Avisar al coordinador']},
+  pins:[],
+  notas:'Condición del extend: [bloqueante e intentos < 3]. Con 3 intentos la misma pantalla muestra el error y deriva a CU-11.'
+};
+
+// ------------------------------------------------------------------ CU-11 devolver
+S.devolver = {
+  grupo:'3 · Entrega en calle', nombre:'Devolver la carga', cu:'CU-11 «extend» CU-09 (+CI-5)', rf:'RF-04', api:'POST /api/v1/despachos/{id}/devolver', dto:'MotivoSolicitud · evento despacho.devuelto',
+  clases:'Despacho.devolver(), OutboxEvento', frame:'web', activo:'Despachos',
+  normal(){ return webFrame('Despachos', `<div class="crumbs">Despachos / DES-2026-000118</div>
+      <div class="h"><h2>DES-2026-000118</h2>${st('FALLIDO')}<span class="muted">Almacén Sol · 3 de 3 intentos</span></div>
+      <div class="banner bad">Se agotaron los 3 intentos de entrega (RN-06). La única salida es devolver la carga a bodega.</div>
+      <div class="modal-back"><div class="modal"><h3>Devolver la carga al remitente</h3>
+        ${field('Motivo (obligatorio)','Tres visitas sin encontrar al cliente; teléfono fuera de servicio.',{attr:'HistorialEstadoDespacho.motivo',big:true})}
+        <div class="banner warn" style="margin-top:12px" data-src="EVT">${P(1)} ${T.evt('SALES-X y FINAN-X')} despacho.devuelto: SALES-X marca el pedido y FINAN-X no factura el flete de entrega.</div>
+        <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn">Volver</button><button class="btn danger">Devolver carga</button></div></div></div>`); },
+  vacio:null,
+  error:{t:'Todavía no se puede devolver',code:'409 · RN-07',m:'Un despacho EN_RUTA no se devuelve directamente: primero se registra la novedad que lo deja FALLIDO.',ctas:['Registrar novedad']},
+  pins:[['EVT','1. CI-5 «include»: la devolución también se publica.']],
+  notas:'Estado final DEVUELTO: EstadoDespacho.esFinal() = true, ya no se mueve.'
+};
+
+// ------------------------------------------------------------------ CU-14 + CU-15 trazabilidad
+S.trazabilidad = {
+  grupo:'4 · Consulta y control', nombre:'Trazabilidad e historial', cu:'CU-14, CU-15', rf:'RF-06, RF-10', api:'GET /despachos/{id}/trazabilidad · GET /despachos/{id}/historial · GET /despachos/guia/{g}', dto:'List<EventoTrazabilidad>, List<MovimientoEstado>',
+  clases:'HistorialEstadoDespacho, Novedad → EventoTrazabilidad.de()', frame:'web', activo:'Trazabilidad',
+  normal(){ return webFrame('Trazabilidad', `<div class="crumbs">Trazabilidad</div>
+      <div class="h"><h2>LGX-2026-000128-1</h2>${st('FALLIDO')}<span class="muted">Clínica Dental Sonrisa · Medellín</span></div>
+      <div class="filters"><span class="in">🔍 Guía, número de despacho o pedido</span></div>
+      <div class="banner info" data-src="OUT">${P(1)} ${T.out} SERVI-X consulta este mismo recurso cuando un cliente pone una PQRS por su pedido. Lo que ve el agente de SERVI-X es exactamente esta línea de tiempo.</div>
+      <div class="grid g2"><div class="box"><h4>Línea de tiempo · CU-14</h4><ul class="tl">
+        <li class="nov"><div class="when">25/09 11:05 · Carlos Ruiz · 6.2442, -75.5812</div><div class="what">Novedad: CLIENTE_AUSENTE (bloqueante)</div><div class="muted">Nadie abre en el consultorio</div></li>
+        <li><div class="when">25/09 11:05 · sistema</div><div class="what">EN_RUTA → FALLIDO</div><div class="muted">Novedad bloqueante (RN-10) · intento 2</div></li>
+        <li><div class="when">25/09 07:40 · laura.gomez · Bodega Itagüí</div><div class="what">ASIGNADO → EN_RUTA</div></li>
+        <li><div class="when">24/09 16:20 · laura.gomez</div><div class="what">EN_PREPARACION → ASIGNADO</div><div class="muted">Guía LGX-2026-000128-1 · Carlos Ruiz</div></li>
+        <li><div class="when">24/09 15:02 · laura.gomez</div><div class="what">REGISTRADO → EN_PREPARACION</div></li>
+        <li class="fin"><div class="when">24/09 14:55 · SALES-X → LOGISTI-X</div><div class="what">Despacho registrado desde PED-2026-0402</div></li></ul></div>
+      <div class="box" style="padding:0"><div style="padding:14px 16px 0"><h4>Historial de estados · CU-15</h4></div><table class="t"><thead><tr><th>Fecha ${A('ocurridoEn')}</th><th>De ${A('estadoAnterior')}</th><th>A ${A('estadoNuevo')}</th><th>Usuario ${A('usuario')}</th><th>Origen ${A('origen')}</th></tr></thead><tbody>
+        <tr><td>25/09 11:05</td><td>${st('EN_RUTA')}</td><td>${st('FALLIDO')}</td><td>c.ruiz</td><td>LOGISTI-X</td></tr>
+        <tr><td>25/09 07:40</td><td>${st('ASIGNADO')}</td><td>${st('EN_RUTA')}</td><td>l.gomez</td><td>LOGISTI-X</td></tr>
+        <tr><td>24/09 16:20</td><td>${st('EN_PREPARACION')}</td><td>${st('ASIGNADO')}</td><td>l.gomez</td><td>LOGISTI-X</td></tr>
+        <tr><td>24/09 15:02</td><td>${st('REGISTRADO')}</td><td>${st('EN_PREPARACION')}</td><td>l.gomez</td><td>LOGISTI-X</td></tr></tbody></table></div></div>
+      ${json('Lo que recibe SERVI-X · EventoTrazabilidad[]', [{ocurridoEn:'2026-09-25T11:05:00-05:00', clase:'NOVEDAD', titulo:'Cliente ausente', detalle:'Nadie abre en el consultorio', ubicacion:'6.2442,-75.5812', usuario:'c.ruiz', origen:'LOGISTI-X'},{ocurridoEn:'2026-09-25T11:05:00-05:00', clase:'ESTADO', titulo:'EN_RUTA → FALLIDO', detalle:'Novedad bloqueante', ubicacion:null, usuario:'sistema', origen:'LOGISTI-X'}])}`); },
+  vacio:{t:'Busque una guía para ver su recorrido',m:'Escriba el número de guía (LGX-…), de despacho (DES-…) o de pedido.',cta:null},
+  error:{t:'La guía no es válida',code:'400 · GuiaServicio.esValida() = false',m:'LGX-2026-000128-7 tiene mal el dígito de verificación. Probablemente se digitó un número de más o de menos.',ctas:['Corregir guía']},
+  pins:[['OUT','1. Punto de integración de salida: SERVI-X (consumidor) llama GET /despachos/guia/{g} y /trazabilidad.']],
+  notas:'La línea de tiempo mezcla dos clases (HistorialEstadoDespacho y Novedad): EventoTrazabilidad.de() las convierte al mismo contrato.'
+};
+
+// ------------------------------------------------------------------ CU-16 reportes
+S.reportes = {
+  grupo:'4 · Consulta y control', nombre:'Reporte logístico', cu:'CU-16', rf:'RF-11', api:'GET /api/v1/reportes/logistica?desde=&hasta=', dto:'ResumenEstado, Cumplimiento, CausaNoEntrega, DesempenoTransportador',
+  clases:'Despacho, Novedad, Transportador (agregaciones SQL)', frame:'web', activo:'Reportes',
+  normal(){ return webFrame('Reportes', `<div class="crumbs">Reportes</div>
+      <div class="h"><h2>Reporte logístico</h2><span class="muted">01/09/2026 – 25/09/2026</span><div class="act"><button class="btn">Exportar CSV</button></div></div>
+      <div class="grid g4" data-src="CALC">
+        <div class="kpi"><div class="v">87 %</div><div class="l">Entregas a tiempo ${A('Cumplimiento.aTiempo / entregados')}</div></div>
+        <div class="kpi"><div class="v">46</div><div class="l">Entregados ${A('ResumenEstado.cantidad')}</div></div>
+        <div class="kpi"><div class="v">1.284 kg</div><div class="l">Peso movilizado ${A('ResumenEstado.pesoKg')}</div></div>
+        <div class="kpi"><div class="v">$ 1,1 M</div><div class="l">Flete facturable ${A('ResumenEstado.flete')}</div></div></div>
+      <div class="spacer"></div><div class="grid g2">
+        <div class="box"><h4>Causas de no entrega ${A('CausaNoEntrega')}</h4>
+          ${[['Cliente ausente',9,82],['Dirección errada',4,36],['Demora en vía',3,27],['Cliente rechaza',1,9]].map(([n,v,w])=>`<div style="margin-bottom:10px"><div class="row" style="justify-content:space-between"><span>${n}</span><b>${v}</b></div><div class="bar"><i style="width:${w}%"></i></div></div>`).join('')}</div>
+        <div class="box" style="padding:0"><div style="padding:14px 16px 0"><h4>Desempeño por transportador ${A('DesempenoTransportador')}</h4></div><table class="t"><thead><tr><th>Transportador</th><th class="num">Despachos</th><th class="num">Entregados</th><th class="num">Fallidos</th><th class="num">Kg</th></tr></thead><tbody>
+          <tr><td>Diana Mejía</td><td class="num">21</td><td class="num">20</td><td class="num">1</td><td class="num">812</td></tr>
+          <tr><td>Carlos Ruiz</td><td class="num">17</td><td class="num">14</td><td class="num">3</td><td class="num">203</td></tr>
+          <tr><td>Andrés Posada</td><td class="num">12</td><td class="num">12</td><td class="num">0</td><td class="num">269</td></tr></tbody></table></div></div>`); },
+  vacio:{t:'Sin movimiento en el rango elegido',m:'No hubo despachos entre las fechas seleccionadas. Amplíe el rango.',cta:'Últimos 30 días'},
+  error:{t:'El reporte tardó demasiado',code:'504 · consulta de agregación',m:'El rango es muy amplio. Pruebe con un mes.',ctas:['Reintentar con 30 días']},
+  pins:[['CALC','Todas las cifras son agregaciones del servidor sobre Despacho y Novedad: no hay nada digitado.']],
+  notas:'Actor principal: Administrador (E). Coordinador y Consulta lo ven en solo lectura.'
+};
+
+// ------------------------------------------------------------------ CU-17 transportadores
+S.transportadores = {
+  grupo:'5 · Administración e integración', nombre:'Administrar transportadores', cu:'CU-17', rf:'RF-05', api:'GET/POST/PUT /api/v1/transportadores · POST …/{id}/inactivar', dto:'GuardarTransportador → TransportadorDto',
+  clases:'Transportador, TipoVehiculo', frame:'web', activo:'Transportadores',
+  normal(){ return webFrame('Transportadores', `<div class="crumbs">Transportadores</div>
+      <div class="h"><h2>Transportadores</h2><div class="act"><button class="btn pri">+ Nuevo transportador</button></div></div>
+      <div class="grid" style="grid-template-columns:1.4fr 1fr">
+      <div class="box" style="padding:0"><table class="t"><thead><tr><th>Nombre ${A('nombre')}</th><th>Documento ${A('documento')}</th><th>Vehículo ${A('tipoVehiculo')}</th><th>Placa ${A('placa')}</th><th class="num">Capacidad ${A('capacidadKg')}</th><th>Estado ${A('activo')}</th></tr></thead><tbody>
+        <tr><td>Diana Mejía</td><td>1.036.555.210</td><td>CAMIONETA</td><td class="mono">GHT-482</td><td class="num">800 kg</td><td><span class="pill st-ENTREGADO">Activo</span></td></tr>
+        <tr><td>Carlos Ruiz</td><td>98.765.432</td><td>MOTO</td><td class="mono">XYZ12E</td><td class="num">100 kg</td><td><span class="pill st-ENTREGADO">Activo</span></td></tr>
+        <tr><td>Andrés Posada</td><td>71.888.019</td><td>CAMION</td><td class="mono">SNK-219</td><td class="num">3.500 kg</td><td><span class="pill st-ENTREGADO">Activo</span></td></tr>
+        <tr style="opacity:.6"><td>Mauricio Vélez</td><td>8.333.102</td><td>FURGON</td><td class="mono">JKP-903</td><td class="num">1.200 kg</td><td><span class="pill st-REGISTRADO">Inactivo</span></td></tr></tbody></table></div>
+      <div class="box"><h4>Editar · Carlos Ruiz</h4><div class="grid">
+        ${field('Nombre','Carlos Ruiz',{attr:'Transportador.nombre'})}
+        <div class="grid g2">${field('Teléfono','300 555 0123',{attr:'telefono'})}${field('Empresa','Mensajería Veloz',{attr:'empresa'})}</div>
+        <div class="grid g2">${field('Tipo de vehículo','MOTO ▾',{attr:'tipoVehiculo : TipoVehiculo'})}${field('Placa','XYZ12E',{attr:'placa'})}</div>
+        <div class="grid g2">${field('Capacidad (kg)','100',{attr:'capacidadKg'})}${field('Zona','Sur',{attr:'zona'})}</div>
+        <div class="row" style="justify-content:space-between"><button class="btn danger">Inactivar</button><button class="btn pri">Guardar</button></div>
+        <p class="help muted" style="margin:0">No existe «Eliminar»: un transportador se inactiva para no romper la historia de sus despachos (RN-14). Por eso es agregación y no composición en el diagrama de clases.</p></div></div></div>`); },
+  vacio:{t:'No hay transportadores registrados',m:'Sin transportadores no se puede asignar ningún despacho (CU-05).',cta:'+ Registrar transportador'},
+  error:{t:'Ya existe un transportador con ese documento',code:'409 · documento duplicado',m:'El documento 98.765.432 ya está registrado (puede estar inactivo). Actívelo en lugar de crear otro.',ctas:['Ver el existente']},
+  pins:[],
+  notas:'Cada campo del formulario es un atributo de Transportador; el tipo de vehículo es la enumeración TipoVehiculo.'
+};
+
+// ------------------------------------------------------------------ CU-18 rutas
+S.rutas = {
+  grupo:'5 · Administración e integración', nombre:'Administrar rutas', cu:'CU-18', rf:'RF-05', api:'GET/POST/PUT /api/v1/rutas', dto:'GuardarRuta → RutaDto',
+  clases:'Ruta', frame:'web', activo:'Rutas',
+  normal(){ return webFrame('Rutas', `<div class="crumbs">Rutas</div>
+      <div class="h"><h2>Rutas de entrega</h2><div class="act"><button class="btn pri">+ Nueva ruta</button></div></div>
+      <div class="box" style="padding:0"><table class="t"><thead><tr><th>Código ${A('codigo')}</th><th>Nombre ${A('nombre')}</th><th>Origen ${A('ciudadOrigen')}</th><th>Destino ${A('ciudadDestino')}</th><th>Zona ${A('zona')}</th><th class="num">Días ${A('diasEstimados')}</th><th class="num">Tarifa base ${A('tarifaBase')}</th><th>Estado ${A('activa')}</th></tr></thead><tbody>
+        <tr><td class="mono">MED-CEN</td><td>Medellín centro</td><td>Itagüí</td><td>Medellín</td><td>Centro</td><td class="num">1</td><td class="num">$ 12.000</td><td><span class="pill st-ENTREGADO">Activa</span></td></tr>
+        <tr><td class="mono">MED-SUR</td><td>Sur del Valle de Aburrá</td><td>Itagüí</td><td>Envigado</td><td>Sur</td><td class="num">1</td><td class="num">$ 10.000</td><td><span class="pill st-ENTREGADO">Activa</span></td></tr>
+        <tr><td class="mono">MED-NOR</td><td>Norte · Bello</td><td>Itagüí</td><td>Bello</td><td>Norte</td><td class="num">2</td><td class="num">$ 14.000</td><td><span class="pill st-ENTREGADO">Activa</span></td></tr>
+        <tr><td class="mono">ANT-RIO</td><td>Oriente · Rionegro</td><td>Itagüí</td><td>Rionegro</td><td>Oriente</td><td class="num">2</td><td class="num">$ 22.000</td><td><span class="pill st-ENTREGADO">Activa</span></td></tr></tbody></table></div>
+      <p class="help muted">La fecha estimada de entrega de un despacho se calcula con <span class="mono">Ruta.fechaEstimadaDesde(salida)</span> y el flete con <span class="mono">tarifaBase</span>.</p>`); },
+  vacio:{t:'No hay rutas',m:'Sin rutas no se puede calcular la fecha estimada ni el flete de un despacho.',cta:'+ Crear ruta'},
+  error:{t:'Código de ruta repetido',code:'409 · codigo único',m:'Ya existe la ruta MED-CEN.',ctas:['Cambiar código']},
+  pins:[],
+  notas:'Asociación Despacho 0..* → 0..1 Ruta: un despacho viaja por una ruta; una ruta sirve a muchos despachos.'
+};
+
+// ------------------------------------------------------------------ CU-19 + CU-20 integración
+S.integracion = {
+  grupo:'5 · Administración e integración', nombre:'Integración: bandeja y diagnóstico', cu:'CU-19, CU-20', rf:'RF-04, RNF-08', api:'POST /despachos/{id}/estado (SALES-X) · GET /integracion/diagnostico?pedidoId= · GET /integracion/eventos', dto:'CambiarEstado, OutboxEvento, DiagnosticoIntegracion.Informe',
+  clases:'OutboxEvento, EstadoEvento, PuertoVentas, PuertoClientes', frame:'web', activo:'Integración',
+  normal(){ return webFrame('Integración', `<div class="crumbs">Integración</div>
+      <div class="h"><h2>Integración con INTEGRAX</h2><div class="act"><span class="pill st-ENTREGADO">SALES-X: REST</span><span class="pill st-FALLIDO">CRM-X: simulado</span></div></div>
+      <div class="grid g2">
+        <div class="box" style="padding:0" data-src="EVT"><div class="row" style="padding:14px 16px 0"><h4 style="margin:0">${P(1)} Bandeja de salida ${A('OutboxEvento')}</h4>${T.evt('SALES-X / FINAN-X')}</div><table class="t" style="margin-top:10px"><thead><tr><th>Evento ${A('tipo')}</th><th>Despacho</th><th>Estado ${A('estado : EstadoEvento')}</th><th class="num">Intentos ${A('intentos')}</th></tr></thead><tbody>
+          <tr><td class="mono">despacho.entregado</td><td>DES-…131</td><td><span class="pill st-ENTREGADO">PUBLICADO</span></td><td class="num">1</td></tr>
+          <tr><td class="mono">despacho.en-ruta</td><td>DES-…129</td><td><span class="pill st-FALLIDO">PENDIENTE</span></td><td class="num">2</td></tr>
+          <tr><td class="mono">despacho.fallido</td><td>DES-…128</td><td><span class="pill st-CANCELADO">FALLIDO</span></td><td class="num">5</td></tr></tbody></table>
+          <div style="padding:12px 16px" class="help">FALLIDO = agotó los reintentos; <span class="mono">ultimoError</span>: «SALES-X 503». Se puede reenviar a mano.</div></div>
+        <div class="box" data-src="SALES-X"><h4>${P(2)} Cambios recibidos de SALES-X · CU-19 ${T.sales}</h4>
+          <ul class="tl"><li><div class="when">25/09 10:12 · origen SALES-X</div><div class="what">PED-2026-0421 → despacho DES-2026-000130 CANCELADO</div><div class="muted">Motivo: «Cliente anuló la compra» · CambiarEstado.origen = SALES-X</div></li>
+          <li class="nov"><div class="when">25/09 09:58 · origen SALES-X</div><div class="what">Rechazado: DES-2026-000117 ya estaba ENTREGADO</div><div class="muted">409 · RN-07 (un estado final no se mueve)</div></li></ul></div>
+      </div><div class="spacer"></div>
+      <div class="box"><h4>${P(3)} Diagnóstico de integración · CU-20</h4>
+        <div class="row" style="margin-bottom:12px"><span class="filters" style="margin:0"><span class="in mono">pedidoId = a41f…</span></span><button class="btn">Diagnosticar</button></div>
+        <div class="check"><i class="y">✓</i><b>SALES-X responde</b>&nbsp;<span class="muted">GET /pedidos/a41f… en 180 ms</span></div>
+        <div class="check"><i class="y">✓</i><b>Pedido despachable</b>&nbsp;<span class="muted">estado APROBADO ∈ integrax.ventas.estados-despachables</span></div>
+        <div class="check"><i class="w">!</i><b>Peso de productos</b>&nbsp;<span class="muted">1 línea sin pesoUnitarioKg: se usará el valor que digite el coordinador</span></div>
+        <div class="check"><i class="n">✕</i><b>CRM-X</b>&nbsp;<span class="muted">sin URL configurada: se usa el doble ClientesSimulados</span></div>
+        <div class="banner warn" style="margin:12px 0 0">Veredicto: <b>se puede integrar con avisos</b> (listoParaIntegrar = true). Falta pedirle a CRM-X su URL (docs/04-contratos-integracion.md).</div></div>`); },
+  vacio:{t:'La bandeja está al día',m:'No hay eventos pendientes ni fallidos: SALES-X y FINAN-X recibieron todo.',cta:null},
+  error:{t:'SALES-X lleva 5 intentos sin responder',code:'OutboxEvento.estado = FALLIDO · ultimoError: 503',m:'Los despachos siguen operando; los avisos esperan en la bandeja. Cuando SALES-X vuelva, reenvíe los fallidos.',ctas:['Reenviar fallidos','Ver diagnóstico']},
+  pins:[['EVT','1. Salida asíncrona: OutboxEvento con reintentos (no saga): una entrega firmada no se deshace.'],['SALES-X','2. Entrada: SALES-X es actor principal de CU-19 y usa CambiarEstado.'],['—','3. CU-20 dice campo por campo qué le falta al JSON del otro equipo.']],
+  notas:'Es la pantalla donde se ve la integración funcionando: lo que entra (CU-19), lo que sale (bandeja) y lo que falta (CU-20).'
+};
+
+const ORDEN = ['mapa','acceso','tablero','registrar','detalle','asignar','guia','ruta','entregar','novedad','reprogramar','devolver','trazabilidad','reportes','transportadores','rutas','integracion'];
+
+// ============================================================================
+// navegación y estados
+// ============================================================================
+let actual = 'mapa', estado = 'normal';
+function frameDe(s){ return s.frame==='movil' ? (b)=>phoneFrame(s.nombre.replace('App: ',''),'LOGISTI-X',b) : (s.frame==='none' ? (b)=>`<div class="app"><div class="appbody">${b}</div></div>` : (b)=>webFrame(s.activo||'Despachos',`<div class="h"><h2>${s.nombre}</h2></div>${b}`)); }
+const esc = (t) => String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function render(){
+  const s = S[actual];
+  document.getElementById('ttl').textContent = `${s.cu} · ${s.nombre}`;
+  let html;
+  if (estado==='normal' || s.sinEstados) html = s.normal();
+  else if (estado==='carga') html = carga(frameDe(s), s.nombre.toLowerCase());
+  else if (estado==='vacio') html = s.vacio ? vacio(frameDe(s), s.vacio) : vacio(frameDe(s), {t:'Esta pantalla no tiene estado vacío',m:'Es una acción sobre un despacho que ya existe: siempre hay datos que mostrar. Revise el estado de error.'});
+  else html = s.error ? error(frameDe(s), s.error) : s.normal();
+  document.getElementById('screen').innerHTML = html;
+  document.querySelectorAll('#estados button').forEach(b=>{ b.classList.toggle('on', b.dataset.e===estado); b.disabled = !!s.sinEstados && b.dataset.e!=='normal'; });
+  document.querySelectorAll('#side a').forEach(a=>a.classList.toggle('on', a.dataset.k===actual));
+  const pins = (s.pins||[]).map(([src,t],i)=>`<li><span class="pin" style="display:inline-grid">${i+1}</span><span>${esc(t)}</span></li>`).join('');
+  document.getElementById('notes').innerHTML = `
+    <div class="card"><h3>Trazabilidad de la pantalla</h3><dl>
+      <dt>Caso de uso</dt><dd><b>${esc(s.cu)}</b></dd>
+      <dt>Requisito</dt><dd>${esc(s.rf||'—')}</dd>
+      <dt>Clases</dt><dd>${esc(s.clases||'—')}</dd>
+      <dt>Servicio</dt><dd><code>${esc(s.api||'—')}</code></dd>
+      <dt>Contrato</dt><dd><code>${esc(s.dto||'—')}</code></dd></dl></div>
+    ${pins?`<div class="card"><h3>Puntos marcados</h3><ul class="pinlist">${pins}</ul></div>`:''}
+    <div class="card"><h3>Nota de diseño</h3><p style="margin:0;font-size:13px">${s.notas||''}</p></div>
+    <div class="card"><h3>Leyenda</h3><div class="legend">
+      <span><i class="sw" style="border-color:var(--sales)"></i>← SALES-X (entra)</span>
+      <span><i class="sw" style="border-color:var(--crm)"></i>← CRM-X (entra)</span>
+      <span><i class="sw" style="border-color:var(--calc)"></i>calculado en servidor</span>
+      <span><i class="sw" style="border-color:var(--evt)"></i>evento → otro sistema</span>
+      <span><i class="sw" style="border-color:var(--out)"></i>→ SERVI-X por REST</span></div></div>`;
+  if (location.hash.slice(1)!==actual) history.replaceState(null,'','#'+actual+(estado!=='normal'?'/'+estado:''));
+}
+function ir(k){ actual=k; estado='normal'; render(); document.querySelector('.stage').scrollTop=0; }
+(function side(){
+  let html = '<h1>LOGISTI-X · Mockups</h1><p class="sub">Prototipo navegable · INTEGRAX</p>'; let g='';
+  ORDEN.forEach(k=>{ const s=S[k]; if (s.grupo!==g){ g=s.grupo; html+=`<div class="grp">${g}</div>`; } html+=`<a href="#${k}" data-k="${k}"><span class="cu">${s.cu.split(' ')[0]}</span><span>${s.nombre}</span></a>`; });
+  const el=document.getElementById('side'); el.innerHTML=html;
+  el.addEventListener('click',e=>{ const a=e.target.closest('a'); if(!a) return; e.preventDefault(); ir(a.dataset.k); });
+})();
+document.getElementById('estados').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||b.disabled) return; estado=b.dataset.e; render(); });
+document.getElementById('ann').addEventListener('change',e=>document.body.classList.toggle('ann',e.target.checked));
+(function desdeHash(){ const [k,e]=location.hash.slice(1).split('/'); if(S[k]) actual=k; if(['carga','vacio','error'].includes(e)) estado=e; })();
+if (new URLSearchParams(location.search).has('captura')) document.body.classList.add('captura');
+render();
+</script>
+</body>
+</html>

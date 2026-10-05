@@ -1,0 +1,48 @@
+# ============================================================================
+# Perfil de pruebas automatizadas.
+#
+# Las pruebas corren contra un PostgreSQL REAL (el mismo motor de produccion),
+# en una base de datos aparte llamada logistix_pruebas. No se usa H2 en memoria
+# a proposito: H2 no tiene jsonb ni timestamptz con la misma semantica, y una
+# prueba verde en H2 puede quedar roja en PostgreSQL.
+#
+# Requisito para ejecutar:  docker compose up -d
+# La base logistix_pruebas se crea sola la primera vez (ver docs/05-pruebas.md).
+# ============================================================================
+spring:
+  datasource:
+    url: ${LOGISTIX_TEST_DB_URL:jdbc:postgresql://localhost:5434/logistix_pruebas}
+    username: ${LOGISTIX_TEST_DB_USER:logistix}
+    password: ${LOGISTIX_TEST_DB_PASSWORD:logistix_dev_2026}
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.flywaydb: WARN
+
+logistix:
+  seguridad:
+    # Secreto de pruebas: no protege nada real y por eso esta a la vista.
+    jwt-secreto: "clave-solo-para-pruebas-automatizadas-logistix-integrax"
+    jwt-vigencia: PT1H
+    sembrar-demo: false
+  operacion:
+    max-intentos-entrega: 3
+    tarifa-base-flete: 12000.00
+    costo-por-kilogramo: 850.00
+
+integrax:
+  # Las pruebas corren contra los dobles: no salen a la red ni dependen de
+  # que otro equipo tenga su servicio arriba.
+  ventas:
+    simulado: true
+  crm:
+    simulado: true
+  eventos:
+    habilitado: false
+    suscriptores: []

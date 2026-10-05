@@ -1,0 +1,31 @@
+# =============================================================================
+# Entorno local de LOGISTI-X.
+#
+#   docker compose up -d      levanta PostgreSQL
+#   docker compose down       lo apaga (los datos se conservan en el volumen)
+#   docker compose down -v    lo apaga y BORRA los datos
+#
+# El puerto es 5434 y no 5432 a proposito: no choca con un PostgreSQL ya
+# instalado en la maquina, ni con el de SALES-X (5433).
+# =============================================================================
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: logistix-postgres
+    environment:
+      POSTGRES_DB: logistix
+      POSTGRES_USER: logistix
+      POSTGRES_PASSWORD: ${LOGISTIX_DB_PASSWORD:-logistix_dev_2026}
+      TZ: America/Bogota
+    ports:
+      - "5434:5432"
+    volumes:
+      - logistix_datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logistix -d logistix"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  logistix_datos:

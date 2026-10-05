@@ -1,0 +1,38 @@
+@startuml 01b-cu-entrega
+!include _estilo.iuml
+left to right direction
+title Vista 2 de 3 · Entrega en calle
+
+actor "Transportador" as TRA
+actor "Coordinador\nde despachos" as COO
+actor "SALES-X" as SALES <<sistema externo>>
+actor "FINAN-X" as FINAN <<sistema externo>>
+
+rectangle "LOGISTI-X" {
+  usecase "CU-08 Confirmar entrega\n(RF-09)\n--\n<b>extension points</b>\nentrega no posible" as CU08
+  usecase "CU-09 Registrar novedad\nde transporte (RF-08)\n--\n<b>extension points</b>\nnovedad bloqueante" as CU09
+  usecase "CU-10 Reprogramar\nla entrega (RF-04)" as CU10
+  usecase "CU-11 Devolver la carga\nal remitente (RF-04)" as CU11
+  usecase "CI-5 Publicar evento\nde estado" as CI5 <<incluido>>
+}
+
+TRA --- CU08
+TRA --- CU09
+TRA --- CU10
+COO --- CU11
+
+CU09 ..> CU08 : <<extend>>\n[entrega no posible]
+CU10 ..> CU09 : <<extend>>\n[bloqueante e\nintentos < 3]
+CU11 ..> CU09 : <<extend>>\n[3 intentos agotados]
+CU08 ..> CI5 : <<include>>
+CU11 ..> CI5 : <<include>>
+
+CI5 --- SALES
+CI5 --- FINAN
+
+note bottom of CI5
+  Salida por bandeja (outbox) con reintentos:
+  SALES-X recibe el estado del pedido,
+  FINAN-X el evento despacho.entregado.
+end note
+@enduml

@@ -1,0 +1,46 @@
+@startuml 01c-cu-consulta-admin
+!include _estilo.iuml
+left to right direction
+title Vista 3 de 3 · Consulta, administración e integración
+
+actor "Usuario LOGISTI-X" as USR <<abstracto>>
+actor "Consulta" as CON
+actor "Transportador" as TRA
+actor "Coordinador\nde despachos" as COO
+actor "Administrador" as ADM
+actor "SERVI-X" as SERVI <<sistema externo>>
+actor "SALES-X" as SALES <<sistema externo>>
+
+CON --|> USR
+TRA --|> USR
+COO --|> USR
+ADM --|> COO
+
+rectangle "LOGISTI-X" {
+  usecase "CU-13 Consultar despachos\n(RF-02, RF-03)" as CU13
+  usecase "CU-14 Consultar\ntrazabilidad (RF-10)" as CU14
+  usecase "CU-15 Consultar historial\nde entregas (RF-06)" as CU15
+  usecase "CU-16 Generar reporte\nlogístico (RF-11)" as CU16
+  usecase "CU-17 Administrar\ntransportadores (RF-05)" as CU17
+  usecase "CU-18 Administrar\nrutas (RF-05)" as CU18
+  usecase "CU-19 Reportar cambio de\nestado desde otro sistema (RF-04)" as CU19
+  usecase "CU-20 Diagnosticar\nla integración (RNF-08)" as CU20
+}
+
+USR --- CU13
+USR --- CU14
+USR --- CU15
+ADM --- CU16
+ADM --- CU17
+ADM --- CU18
+ADM --- CU20
+
+CU14 --- SERVI
+CU19 --- SALES
+
+note top of USR
+  Generalización: todo usuario autenticado
+  consulta (CU-13..15); el Administrador
+  hereda además todo lo del Coordinador.
+end note
+@enduml

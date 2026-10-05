@@ -1,0 +1,58 @@
+@startuml 01a-cu-preparacion-distribucion
+!include _estilo.iuml
+left to right direction
+title Vista 1 de 3 · Preparación y distribución del despacho
+
+actor "Coordinador\nde despachos" as COO
+actor "SALES-X" as SALES <<sistema externo>>
+actor "CRM-X" as CRM <<sistema externo>>
+
+rectangle "LOGISTI-X" {
+  usecase "CU-01 Registrar despacho\n(RF-01, RF-02)" as CU01
+  usecase "CU-02 Corregir el destino\n(RF-01)" as CU02
+  usecase "CU-03 Ajustar la carga\n(RF-01)" as CU03
+  usecase "CU-04 Alistar la carga\n(RF-04)" as CU04
+  usecase "CU-05 Asignar transportador\ny generar guía (RF-05, RF-07)\n--\n<b>extension points</b>\nrótulo solicitado" as CU05
+  usecase "CU-06 Consultar e\nimprimir la guía (RF-07)" as CU06
+  usecase "CU-07 Sacar la carga\na ruta (RF-04)" as CU07
+  usecase "CU-12 Cancelar\nel despacho (RF-04)" as CU12
+
+  usecase "CI-1 Validar el pedido\nen SALES-X" as CI1 <<incluido>>
+  usecase "CI-2 Obtener la dirección\ndel cliente en CRM-X" as CI2 <<incluido>>
+  usecase "CI-3 Generar número\nde guía (RF-07)" as CI3 <<incluido>>
+  usecase "CI-4 Calcular peso,\nvalor y flete" as CI4 <<incluido>>
+  usecase "CI-5 Publicar evento\nde estado" as CI5 <<incluido>>
+}
+
+COO --- CU01
+COO --- CU02
+COO --- CU03
+COO --- CU04
+COO --- CU05
+COO --- CU07
+COO --- CU12
+
+CU01 ..> CI1 : <<include>>
+CU01 ..> CI2 : <<include>>
+CU01 ..> CI4 : <<include>>
+CU03 ..> CI4 : <<include>>
+CU05 ..> CI3 : <<include>>
+CU05 ..> CI4 : <<include>>
+CU07 ..> CI5 : <<include>>
+CU12 ..> CI5 : <<include>>
+CU06 .> CU05 : <<extend>>\n[rótulo solicitado]
+
+CI1 --- SALES
+CI5 --- SALES
+CI2 --- CRM
+
+legend right
+  <b>Convenciones UML</b>
+  línea continua: asociación actor–caso de uso
+  punteada «include»: el caso base siempre la ejecuta
+  punteada «extend»: solo ocurre si se cumple [condición];
+     la flecha va del caso que extiende al caso base
+  «sistema externo»: otro microproyecto de INTEGRAX
+  CI-x (gris): comportamiento común reutilizado
+endlegend
+@enduml

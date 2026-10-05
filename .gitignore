@@ -1,0 +1,64 @@
+# ---- Secretos (lo primero, ANTES del primer commit) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secretos/
+
+# ---- Compilacion ----
+target/
+build/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# ---- Herramientas ----
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
+logs/
+
+# --- seguridad (añadido por Claude) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.vercel/
+.supabase/
+supabase/.temp/
+# --- dependencias y builds ---
+node_modules/
+.next/
+out/
+dist/
+build/
+target/
+__pycache__/
+*.pyc
+.venv/
+venv/
+# --- pesados (no se versionan) ---
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.zip
+*.rar
+*.7z
+*.psd
+*.exe
+*.msi
+# --- sistema ---
+.DS_Store
+Thumbs.db
+desktop.ini

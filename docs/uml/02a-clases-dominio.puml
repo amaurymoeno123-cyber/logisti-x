@@ -1,0 +1,257 @@
+@startuml 02a-clases-dominio
+' ============================================================================
+' LOGISTI-X · Diagrama de clases — Modelo de dominio (UML 2.5)
+' 1 a 1 con src/main/java/.../despacho/dominio y .../catalogo/dominio.
+' Visibilidad: - privado  + publico  # protegido  ~ paquete
+' Se omiten getters (todos los atributos se leen con get/is).
+' ============================================================================
+skinparam dpi 170
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1F2937
+  ArrowColor #1F2937
+  HeaderBackgroundColor #F3F4F6
+}
+skinparam class<<raíz del agregado>> {
+  BorderColor #1D4ED8
+  HeaderBackgroundColor #DBEAFE
+  BorderThickness 2
+}
+skinparam class<<enumeración>> {
+  HeaderBackgroundColor #FEF3C7
+  BorderColor #92400E
+}
+skinparam package {
+  BorderColor #6B7280
+  BackgroundColor #FCFCFD
+  FontStyle bold
+}
+skinparam ArrowFontSize 10
+hide empty members
+left to right direction
+
+title LOGISTI-X · Diagrama de clases — Modelo de dominio
+
+package "despacho.dominio" {
+
+  class Despacho <<raíz del agregado>> {
+    .. identidad ..
+    - despachoId : UUID
+    - numero : String
+    - numeroGuia : String
+    - version : Long
+    .. pedido y cliente (copia de SALES-X / CRM-X) ..
+    - pedidoId : UUID
+    - pedidoNumero : String
+    - clienteId : UUID
+    - clienteNombre : String
+    - clienteDocumento : String
+    - clienteTelefono : String
+    .. destino ..
+    - direccionEntrega : String
+    - ciudadEntrega : String
+    - departamentoEntrega : String
+    - referenciaDireccion : String
+    .. estado y operación ..
+    - estado : EstadoDespacho = REGISTRADO
+    - asignadoEn : OffsetDateTime
+    - fechaEstimadaEntrega : LocalDate
+    - despachadoEn : OffsetDateTime
+    - entregadoEn : OffsetDateTime
+    - canceladoEn : OffsetDateTime
+    - intentosEntrega : Integer = 0
+    - motivoCancelacion : String
+    - observaciones : String
+    .. carga y dinero (calculados, RN-11) ..
+    - pesoTotalKg : BigDecimal
+    - unidadesTotales : Integer
+    - valorDeclarado : BigDecimal
+    - costoFlete : BigDecimal
+    .. prueba de entrega ..
+    - receptorNombre : String
+    - receptorDocumento : String
+    - observacionEntrega : String
+    .. auditoría ..
+    - creadoPor : String
+    - creadoEn : OffsetDateTime
+    - actualizadoEn : OffsetDateTime
+    __
+    # Despacho()
+    + Despacho(numero : String, pedidoId : UUID, pedidoNumero : String, clienteId : UUID, ...)
+    .. carga (CU-03) ..
+    + agregarItem(productoId : UUID, sku : String, nombre : String, cantidad : int, pesoUnitarioKg : BigDecimal, valorUnitario : BigDecimal) : DespachoItem
+    + cambiarCantidad(itemId : UUID, nuevaCantidad : int) : DespachoItem
+    + quitarItem(itemId : UUID) : void
+    + recalcularCarga() : void
+    + recalcularFlete(tarifaBase : BigDecimal, costoPorKilogramo : BigDecimal) : void
+    .. destino (CU-02) ..
+    + actualizarDestino(direccion : String, ciudad : String, departamento : String, referencia : String, telefono : String, observaciones : String) : void
+    .. ciclo de vida (CU-04, 05, 07, 08, 10, 11, 12, 19) ..
+    + preparar(usuario : String) : void
+    + asignar(transportador : Transportador, ruta : Ruta, numeroGuia : String, fechaEstimada : LocalDate, usuario : String) : void
+    + despachar(usuario : String, ubicacion : String) : void
+    + entregar(receptorNombre : String, receptorDocumento : String, observacion : String, usuario : String, ubicacion : String) : void
+    + marcarFallida(motivo : String, usuario : String, ubicacion : String) : void
+    + reprogramar(nuevaFecha : LocalDate, maxIntentos : int, usuario : String) : void
+    + devolver(motivo : String, usuario : String) : void
+    + cancelar(motivo : String, usuario : String, origen : String) : void
+    + moverA(destino : EstadoDespacho, motivo : String, ubicacion : String, usuario : String, origen : String) : void
+    + registrarNovedad(tipo : TipoNovedad, descripcion : String, ubicacion : String, bloqueante : Boolean, usuario : String) : Novedad
+    + entregadoATiempo() : boolean
+    .. validación interna ..
+    - exigirEditable(accion : String) : void
+    - {static} exigirCantidadPositiva(cantidad : int) : void
+    - registrarHistorial(anterior : EstadoDespacho, nuevo : EstadoDespacho, motivo : String, ubicacion : String, usuario : String, origen : String) : void
+  }
+
+  class DespachoItem {
+    - id : UUID
+    - linea : Integer
+    - productoId : UUID
+    - productoSku : String
+    - productoNombre : String
+    - cantidad : Integer
+    - pesoUnitarioKg : BigDecimal
+    - valorUnitario : BigDecimal
+    - pesoLineaKg : BigDecimal
+    - valorLinea : BigDecimal
+    __
+    # DespachoItem()
+    ~ recalcular() : void
+    ~ cambiarCantidad(nuevaCantidad : int) : void
+  }
+
+  class HistorialEstadoDespacho {
+    - id : UUID
+    - estadoAnterior : EstadoDespacho
+    - estadoNuevo : EstadoDespacho
+    - motivo : String
+    - ubicacion : String
+    - usuario : String
+    - origen : String = "LOGISTI-X"
+    - ocurridoEn : OffsetDateTime
+  }
+
+  class Novedad {
+    - id : UUID
+    - tipo : TipoNovedad
+    - descripcion : String
+    - ubicacion : String
+    - bloqueante : boolean
+    - reportadaPor : String
+    - ocurridaEn : OffsetDateTime
+    - resuelta : boolean
+    - resolucion : String
+    - resueltaEn : OffsetDateTime
+    __
+    + resolver(resolucion : String) : void
+  }
+
+  enum EstadoDespacho <<enumeración>> {
+    REGISTRADO
+    EN_PREPARACION
+    ASIGNADO
+    EN_RUTA
+    ENTREGADO
+    FALLIDO
+    DEVUELTO
+    CANCELADO
+    __
+    + permitePasarA(destino : EstadoDespacho) : boolean
+    + siguientesPosibles() : Set<EstadoDespacho>
+    + esEditable() : boolean
+    + esFinal() : boolean
+    + bloqueaElPedido() : boolean
+  }
+
+  enum TipoNovedad <<enumeración>> {
+    DIRECCION_ERRADA
+    CLIENTE_AUSENTE
+    CLIENTE_RECHAZA
+    DEMORA_EN_VIA
+    AVERIA_VEHICULO
+    CARGA_AVERIADA
+    ZONA_DE_RIESGO
+    DATOS_INCOMPLETOS
+    OTRA
+    __
+    - bloqueaPorDefecto : boolean
+    + bloqueaPorDefecto() : boolean
+  }
+}
+
+package "catalogo.dominio" {
+
+  class Transportador {
+    - id : UUID
+    - documento : String
+    - nombre : String
+    - telefono : String
+    - empresa : String
+    - tipoVehiculo : TipoVehiculo = MOTO
+    - placa : String
+    - capacidadKg : BigDecimal
+    - zona : String
+    - activo : boolean = true
+    - creadoEn : OffsetDateTime
+    - actualizadoEn : OffsetDateTime
+    __
+    + actualizar(nombre : String, telefono : String, empresa : String, tipo : TipoVehiculo, placa : String, capacidadKg : BigDecimal, zona : String) : void
+    + puedeCargar(pesoKg : BigDecimal) : boolean
+    + inactivar() : void
+    + activar() : void
+  }
+
+  class Ruta {
+    - id : UUID
+    - codigo : String
+    - nombre : String
+    - ciudadOrigen : String
+    - ciudadDestino : String
+    - zona : String
+    - diasEstimados : Integer = 1
+    - tarifaBase : BigDecimal
+    - activa : boolean = true
+    - creadoEn : OffsetDateTime
+    - actualizadoEn : OffsetDateTime
+    __
+    + actualizar(nombre : String, origen : String, destino : String, zona : String, dias : Integer, tarifaBase : BigDecimal) : void
+    + fechaEstimadaDesde(salida : LocalDate) : LocalDate
+    + inactivar() : void
+    + activar() : void
+  }
+
+  enum TipoVehiculo <<enumeración>> {
+    MOTO
+    AUTOMOVIL
+    CAMIONETA
+    CAMION
+    FURGON
+  }
+}
+
+' --------------------------------------------------------------- composición
+' El agregado Despacho es dueño del ciclo de vida de sus partes: se crean,
+' se guardan y se borran con él (cascade ALL + orphanRemoval).
+Despacho "1" *-- "1..*" DespachoItem : carga >
+Despacho "1" *-- "1..*" HistorialEstadoDespacho : trazabilidad >
+Despacho "1" *-- "0..*" Novedad : novedades >
+
+' --------------------------------------------------------------- agregación
+' El transportador agrupa los despachos que lleva, pero no es su dueño:
+' si se inactiva, los despachos y su historia siguen existiendo (RN-14).
+Transportador "0..1" o-- "0..*" Despacho : transporta >
+
+' --------------------------------------------------------------- asociación
+Despacho "0..*" --> "0..1" Ruta : viaja por >
+
+' --------------------------------------------------------------- dependencias de tipo
+Despacho ..> EstadoDespacho
+HistorialEstadoDespacho ..> EstadoDespacho
+Novedad ..> TipoNovedad
+Transportador ..> TipoVehiculo
+@enduml

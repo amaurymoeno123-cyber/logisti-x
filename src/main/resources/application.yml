@@ -1,0 +1,136 @@
+# ============================================================================
+# LOGISTI-X - configuracion base (aplica a todos los entornos)
+#
+# Regla: aqui NO hay un solo secreto escrito. Todo lo sensible llega por
+# variable de entorno y la aplicacion no arranca si falta. Ver .env.example.
+# ============================================================================
+spring:
+  application:
+    name: logisti-x
+
+  # --- Base de datos -------------------------------------------------------
+  datasource:
+    url: ${LOGISTIX_DB_URL:jdbc:postgresql://localhost:5434/logistix}
+    username: ${LOGISTIX_DB_USER:logistix}
+    password: ${LOGISTIX_DB_PASSWORD}
+    hikari:
+      # Un pool pequeno y explicito: mas conexiones no es mas rapido, es mas
+      # memoria en PostgreSQL y colas mas largas cuando algo se traba.
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 10000
+      pool-name: logistix-pool
+
+  jpa:
+    # ddl-auto=validate: el esquema lo manda Flyway, Hibernate solo comprueba
+    # que las entidades coincidan. Con 'update' Hibernate cambiaria tablas por
+    # su cuenta y la base de datos dejaria de ser reproducible.
+    hibernate:
+      ddl-auto: validate
+    # open-in-view=false: cerrar la sesion al salir del servicio. Dejarlo en
+    # true (el valor por omision de Spring Boot) hace que consultas perezosas
+    # se disparen al serializar el JSON, fuera de la transaccion.
+    open-in-view: false
+    properties:
+      hibernate:
+        default_schema: logistix
+        jdbc:
+          time_zone: UTC
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    schemas: logistix
+    default-schema: logistix
+    locations: classpath:db/migration
+    # No permitir migraciones "limpiando" la base: un clean accidental borra
+    # todo. Se apaga explicitamente.
+    clean-disabled: true
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+  threads:
+    virtual:
+      enabled: true   # hilos virtuales de Java 21: mas peticiones concurrentes
+
+server:
+  port: ${LOGISTIX_PORT:8085}
+  error:
+    # Nunca devolver la traza al cliente: le regala al atacante el mapa interno.
+    include-stacktrace: never
+    include-message: never
+  compression:
+    enabled: true
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+# --- Configuracion propia de LOGISTI-X --------------------------------------
+logistix:
+  seguridad:
+    # Sin valor por omision a proposito: si falta, la aplicacion no arranca.
+    jwt-secreto: ${LOGISTIX_JWT_SECRETO}
+    jwt-vigencia: PT8H
+    sembrar-demo: false
+  operacion:
+    # Intentos de entrega antes de que el despacho solo pueda devolverse (RN-06).
+    max-intentos-entrega: 3
+    # Tarifa base del flete y costo por kilogramo transportado. El flete lo
+    # recalcula SIEMPRE el servidor a partir de la carga (RN-11).
+    tarifa-base-flete: 12000.00
+    costo-por-kilogramo: 850.00
+
+integrax:
+  ventas:
+    simulado: ${VENTAS_SIMULADO:true}
+    url-base: ${VENTAS_URL:http://localhost:8080}
+    api-key: ${VENTAS_API_KEY:}
+    conexion-timeout: PT2S
+    lectura-timeout: PT3S
+    # Estados del pedido que, EN EL VOCABULARIO DE SALES-X, admiten despacho.
+    # Esta aqui y no en el codigo porque ese vocabulario es de otro equipo: si
+    # manana le llaman APROBADO a lo que hoy es CONFIRMADO, se agrega a esta
+    # lista y se reinicia. No se recompila nada.
+    estados-despachables: [CONFIRMADO, FACTURADO, DESPACHADO]
+  crm:
+    simulado: ${CRM_SIMULADO:true}
+    url-base: ${CRM_URL:http://localhost:8081}
+    api-key: ${CRM_API_KEY:}
+    conexion-timeout: PT2S
+    lectura-timeout: PT3S
+  eventos:
+    habilitado: ${EVENTOS_HABILITADOS:false}
+    max-intentos: 5
+    intervalo-ms: 5000
+    suscriptores: []
+
+logging:
+  level:
+    co.unisabaneta.integrax.logistix: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN

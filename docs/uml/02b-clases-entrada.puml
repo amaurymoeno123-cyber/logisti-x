@@ -1,0 +1,156 @@
+@startuml 02b-clases-entrada
+' ============================================================================
+' LOGISTI-X · Diagrama de clases — Contratos de integración (UML 2.5)
+' Muestra de dónde sale cada contrato de datos (DTO / JSON) que LOGISTI-X
+' recibe o expone. 1 a 1 con src/main/java/.../integracion y .../api/dto.
+' ============================================================================
+skinparam dpi 170
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1F2937
+  ArrowColor #1F2937
+  HeaderBackgroundColor #F3F4F6
+}
+skinparam class<<raíz del agregado>> {
+  BorderColor #1D4ED8
+  HeaderBackgroundColor #DBEAFE
+  BorderThickness 2
+}
+skinparam class<<DTO entrada>> {
+  HeaderBackgroundColor #DCFCE7
+  BorderColor #166534
+}
+skinparam class<<DTO salida>> {
+  HeaderBackgroundColor #FCE7F3
+  BorderColor #9D174D
+}
+skinparam class<<evento>> {
+  HeaderBackgroundColor #FFEDD5
+  BorderColor #9A3412
+}
+skinparam interface {
+  BackgroundColor #FFFFFF
+  BorderColor #4C1D95
+  HeaderBackgroundColor #EDE9FE
+}
+skinparam package {
+  BorderColor #6B7280
+  BackgroundColor #FCFCFD
+  FontStyle bold
+}
+skinparam ArrowFontSize 10
+hide empty members
+
+title LOGISTI-X · Diagrama de clases — Contratos de ENTRADA (lo que consume)
+
+class Despacho <<raíz del agregado>> {
+  - despachoId : UUID
+  - numero : String
+  - numeroGuia : String
+  - pedidoId : UUID
+  - estado : EstadoDespacho
+  - ...
+  (atributos completos en la vista de dominio)
+}
+
+package "integracion.ventas  —  consume SALES-X" {
+  interface PuertoVentas <<interface>> {
+    + obtener(pedidoId : UUID) : PedidoExterno
+    + reportarEstadoDelPedido(pedidoId : UUID, estado : String, motivo : String) : void
+    + descripcion() : String
+  }
+  class VentasRest <<adaptador HTTP>> {
+    - http : RestClient
+    - urlBase : String
+    + obtener(pedidoId : UUID) : PedidoExterno
+    + reportarEstadoDelPedido(pedidoId : UUID, estado : String, motivo : String) : void
+  }
+  class VentasSimuladas <<doble de prueba>>
+  class PedidoExterno <<DTO entrada>> {
+    + pedidoId : UUID
+    + numero : String
+    + clienteId : UUID
+    + clienteNombre : String
+    + clienteDocumento : String
+    + estado : String
+    + total : BigDecimal
+    + items : List<LineaPedidoExterna>
+    __
+    + sePuedeDespachar(estadosPermitidos : Collection<String>) : boolean
+  }
+  class LineaPedidoExterna <<DTO entrada>> {
+    + productoId : UUID
+    + sku : String
+    + nombre : String
+    + cantidad : Integer
+    + precioUnitario : BigDecimal
+    + pesoUnitarioKg : BigDecimal
+  }
+}
+
+package "integracion.crm  —  consume CRM-X" {
+  interface PuertoClientes <<interface>> {
+    + obtener(clienteId : UUID) : ClienteExterno
+    + descripcion() : String
+  }
+  class ClientesRest <<adaptador HTTP>>
+  class ClientesSimulados <<doble de prueba>>
+  class ClienteExterno <<DTO entrada>> {
+    + clienteId : UUID
+    + tipo : String
+    + nombre : String
+    + documento : String
+    + telefono : String
+    + direccion : String
+    + ciudad : String
+    + departamento : String
+    + activo : boolean
+  }
+}
+
+package "despacho.api.dto  —  solicitudes REST (panel, app, SALES-X)" {
+  class CrearDespacho <<DTO entrada>> {
+    + pedidoId : UUID {obligatorio}
+    + direccionEntrega : String
+    + ciudadEntrega : String
+    + items : List<LineaCarga>
+  }
+  class ConfirmarEntrega <<DTO entrada>> {
+    + receptorNombre : String {obligatorio}
+    + receptorDocumento : String
+    + observacion : String
+    + ubicacion : String
+  }
+  class CambiarEstado <<DTO entrada>> {
+    + estado : String
+    + motivo : String
+    + origen : String
+  }
+}
+
+PuertoVentas <|.. VentasRest
+PuertoVentas <|.. VentasSimuladas
+PuertoClientes <|.. ClientesRest
+PuertoClientes <|.. ClientesSimulados
+PedidoExterno "1" *-- "1..*" LineaPedidoExterna : items >
+PuertoVentas ..> PedidoExterno : <<devuelve>>
+PuertoClientes ..> ClienteExterno : <<devuelve>>
+Despacho ..> PedidoExterno : <<se crea desde>>\n(pedidoId, cliente, líneas)
+Despacho ..> ClienteExterno : <<se crea desde>>\n(dirección, teléfono)
+CrearDespacho ..> Despacho : <<crea>>
+ConfirmarEntrega ..> Despacho : <<invoca entregar()>>
+CambiarEstado ..> Despacho : <<invoca moverA()>>
+legend right
+  <b>Colores del encabezado</b>
+  verde: DTO de entrada (llega a LOGISTI-X)
+  morado: puerto (interfaz); lo realizan el adaptador REST
+     y el doble de prueba (flecha hueca punteada)
+  Los DTO son records de Java: atributos públicos e inmutables.
+  El dominio nunca depende del JSON ajeno: el adaptador traduce
+  en la frontera (@JsonAlias acepta varios nombres de campo).
+endlegend
+@enduml
