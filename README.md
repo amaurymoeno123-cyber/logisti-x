@@ -1,17 +1,40 @@
 # LOGISTI-X · Gestión de Despachos y Entregas
 
-Microproyecto **2.5** de la plataforma **INTEGRAX**
-Electiva Profesional II — Integración de Aplicaciones y Sistemas · Unisabaneta
-Entrega definitiva: **18 de septiembre de 2026**
+[![Pruebas](https://github.com/amaurymoeno123-cyber/logisti-x/actions/workflows/pruebas.yml/badge.svg)](https://github.com/amaurymoeno123-cyber/logisti-x/actions/workflows/pruebas.yml)
+![Java 21](https://img.shields.io/badge/Java-21-informational)
+![Spring Boot 3.5](https://img.shields.io/badge/Spring%20Boot-3.5-informational)
+![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-informational)
 
-Controla la distribución desde que el pedido sale de bodega hasta que el
-cliente firma: rutas, transportadores, número de guía, estados de despacho,
-novedades de transporte y trazabilidad.
+Microservicio que controla la distribución desde que el pedido sale de bodega
+hasta que el cliente firma: rutas, transportadores, número de guía, estados de
+despacho, novedades de transporte y trazabilidad. Se integra con los sistemas
+de ventas y clientes por contratos REST y publica eventos hacia finanzas.
+
+![Tablero de despachos](docs/capturas/02%20-%20Tablero%20de%20despachos.png)
+
+## Lo que vale la pena mirar
+
+- **Puertos y adaptadores.** El dominio no conoce HTTP ni la base de datos: 85 de
+  las 99 pruebas corren sin levantar Spring.
+- **Bandeja de salida (outbox) en vez de saga.** Una entrega firmada no se puede
+  compensar, así que el aviso a ventas se guarda en la misma transacción y se
+  reintenta ([ADR-008](docs/adr/ADR-008-aviso-a-sales-x.md)).
+- **Máquina de estados explícita** para el despacho, con transiciones validadas
+  en el dominio ([ADR-005](docs/adr/ADR-005-maquina-de-estados.md)).
+- **Pruebas contra PostgreSQL real**, no H2, también en el CI.
+- **Pruebas de contrato** del JSON de otros equipos sin que su servidor exista.
+- **Seguridad cerrada por defecto:** JWT con 5 roles, BCrypt, y la app no
+  arranca si falta el secreto (sin valores por defecto en producción).
+- **Tiempo real con SSE** para el tablero operativo
+  ([ADR-011](docs/adr/ADR-011-tiempo-real-con-sse.md)).
 
 ```
-Java 21 · Spring Boot 3.5 · PostgreSQL 16 · Flyway · JWT · OpenAPI
-99 pruebas automatizadas · 11 decisiones de arquitectura documentadas
+Java 21 · Spring Boot 3.5 · PostgreSQL 16 · Flyway · JWT · OpenAPI · SSE
+99 pruebas automatizadas · 11 decisiones de arquitectura · 20 casos de uso
 ```
+
+> Proyecto académico: microproyecto 2.5 de la plataforma **INTEGRAX**, Electiva
+> Profesional II (Integración de Aplicaciones y Sistemas), Unisabaneta, 2026-2.
 
 ---
 
